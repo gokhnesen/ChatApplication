@@ -1,6 +1,9 @@
 ﻿using ChatApplication.Application;
 using ChatApplication.Application.SignalR;
+using ChatApplication.Domain.Entities;
 using ChatApplication.Persistence;
+using ChatApplication.Persistence.DbContext;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
@@ -28,6 +31,10 @@ namespace ChatApplicationAPI.API
             builder.Services.AddApplicationServices();
             builder.Services.AddPersistenceServices(builder.Configuration);
             builder.Services.AddSignalR();
+            builder.Services.AddAuthorization();
+            builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+                .AddRoles<IdentityRole>()
+                .AddEntityFrameworkStores<ChatAppDbContext>();
 
             var app = builder.Build();
 
@@ -45,6 +52,7 @@ namespace ChatApplicationAPI.API
             app.UseAuthorization();
             app.MapControllers();
             app.MapHub<ChatHub>("/chathub");
+            app.MapGroup("api").MapIdentityApi<ApplicationUser>();
 
             app.Run();
         }
