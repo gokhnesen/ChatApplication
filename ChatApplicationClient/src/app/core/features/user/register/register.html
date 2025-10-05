@@ -1,0 +1,10 @@
+<form (ngSubmit)="register()" class="auth-form">
+  <h2>Kayıt Ol</h2>
+  <input [(ngModel)]="name" name="name" type="text" placeholder="Ad" required />
+  <input [(ngModel)]="lastName" name="lastName" type="text" placeholder="Soyad" required />
+
+  <input [(ngModel)]="email" name="email" type="email" placeholder="Email" required />
+  <input [(ngModel)]="password" name="password" type="password" placeholder="Şifre" required />
+  <button type="submit">Kayıt Ol</button>
+  <div *ngIf="error" class="error">{{ error }}</div>
+</form>

@@ -1,0 +1,21 @@
+<div class="chat-container">
+  <div class="messages">
+    <div 
+      *ngFor="let msg of messages" 
+      class="message-box" 
+      [ngClass]="{'own-message': msg.user.name === currentUser.name}">
+      <img [src]="msg.user.avatar" alt="avatar" class="avatar" />
+      <div class="message-content">
+        <div class="message-header">
+          <strong>{{ msg.user.name }}</strong>
+          <small>{{ msg.time | date:'short' }}</small>
+        </div>
+        <div class="message-text">{{ msg.text }}</div>
+      </div>
+    </div>
+  </div>
+  <form (ngSubmit)="sendMessage()" class="chat-form">
+    <input [(ngModel)]="messageText" name="message" placeholder="Mesaj yaz..." required />
+    <button type="submit">Gönder</button>
+  </form>
+</div>

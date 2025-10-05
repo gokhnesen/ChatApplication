@@ -35,6 +35,16 @@ namespace ChatApplicationAPI.API
             builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ChatAppDbContext>();
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
 
             var app = builder.Build();
 
@@ -48,6 +58,7 @@ namespace ChatApplicationAPI.API
                 app.MapOpenApi();
             }
 
+            app.UseCors();
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
