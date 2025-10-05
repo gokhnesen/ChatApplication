@@ -1,0 +1,7 @@
+<form (ngSubmit)="login()" class="auth-form">
+  <h2>Giriş Yap</h2>
+  <input [(ngModel)]="email" name="email" type="email" placeholder="Email" required />
+  <input [(ngModel)]="password" name="password" type="password" placeholder="Şifre" required />
+  <button type="submit">Giriş Yap</button>
+  <div *ngIf="error" class="error">{{ error }}</div>
+</form>

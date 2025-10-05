@@ -19,13 +19,11 @@ namespace ChatApplicationAPI.API.Controllers
         [HttpGet("{userId1}/{userId2}")]
         public async Task<IActionResult> GetMessages(string userId1, string userId2)
         {
-            // Gelen değerleri logla
             Console.WriteLine($"GetMessages - userId1: {userId1}, userId2: {userId2}");
             
             var query = new GetMessagesQuery { UserId1 = userId1, UserId2 = userId2 };
             var messages = await Mediator.Send(query);
             
-            // Sonuçları logla
             Console.WriteLine($"Bulunan mesaj sayısı: {messages.Count}");
             
             return Ok(messages);
