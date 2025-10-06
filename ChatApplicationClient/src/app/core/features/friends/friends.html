@@ -1,0 +1,28 @@
+<div class="friends-container">
+  <div class="search-bar">
+    <i class="fas fa-search search-icon"></i>
+    <input 
+      type="text" 
+      [(ngModel)]="searchText" 
+      placeholder="Arkadaş ara..." 
+      (input)="filterFriends()"
+      class="search-input">
+  </div>
+
+  <div class="friends-list">
+    <div 
+      *ngFor="let friend of filteredFriends" 
+      class="friend-item"
+      [class.active]="selectedFriend?.id === friend.id"
+      (click)="selectFriend(friend)">
+      <img [src]="friend.avatar" alt="avatar" class="friend-avatar">
+      <div class="friend-info">
+        <h4>{{ friend.name }}</h4>
+        <p class="last-message">{{ friend.lastMessage || 'Henüz mesaj yok' }}</p>
+      </div>
+      <div class="friend-meta" *ngIf="friend.unread">
+        <span class="unread-badge">{{ friend.unread }}</span>
+      </div>
+    </div>
+  </div>
+</div>

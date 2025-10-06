@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 interface ChatMessage {
@@ -18,22 +18,36 @@ interface ChatMessage {
   templateUrl: './chat.html',
   styleUrls: ['./chat.scss']
 })
-export class Chat {
-  messages: ChatMessage[] = [
-    {
-      text: 'Merhaba!',
-      time: new Date(),
-      user: { name: 'Ali', avatar: 'https://i.pravatar.cc/40?img=1' }
-    },
-    {
-      text: 'Selam, nasılsın?',
-      time: new Date(),
-      user: { name: 'Ayşe', avatar: 'https://i.pravatar.cc/40?img=2' }
-    }
-  ];
+export class Chat implements OnChanges {
+  @Input() receiverUser: any = { name: 'Sohbet', avatar: 'assets/default-avatar.png' }; // Varsayılan değer
+  
+  messages: ChatMessage[] = [];
   messageText: string = '';
   currentUser = { name: 'Ben', avatar: 'https://i.pravatar.cc/40?img=3' };
-  receiverUser = { name: 'Ayşe', avatar: 'https://i.pravatar.cc/40?img=2' }; // örnek alıcı
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['receiverUser'] && changes['receiverUser'].currentValue) {
+      // Aquí podrías cargar los mensajes para este usuario específico
+      // Por ejemplo, llamando a un servicio
+      this.loadMessages();
+    }
+  }
+
+  loadMessages(): void {
+    // Simulación - Reemplaza esto con tu lógica real
+    this.messages = [
+      {
+        text: 'Merhaba!',
+        time: new Date(),
+        user: { name: this.currentUser.name, avatar: this.currentUser.avatar }
+      },
+      {
+        text: 'Selam, nasılsın?',
+        time: new Date(),
+        user: { name: this.receiverUser.name, avatar: this.receiverUser.avatar }
+      }
+    ];
+  }
 
   sendMessage() {
     if (this.messageText.trim()) {
@@ -44,10 +58,5 @@ export class Chat {
       });
       this.messageText = '';
     }
-  }
-
-  // Alıcıyı değiştirmek için fonksiyon ekleyebilirsin
-  setReceiver(user: { name: string; avatar: string }) {
-    this.receiverUser = user;
   }
 }

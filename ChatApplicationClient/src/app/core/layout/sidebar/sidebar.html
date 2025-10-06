@@ -1,0 +1,27 @@
+<div class="sidebar">
+  <div class="profile-section">
+    <div class="avatar-container">
+      <img [src]="currentUser?.avatar || 'assets/default-avatar.png'" alt="Profil" class="profile-avatar">
+    </div>
+    <h3>{{ currentUser?.name || 'Kullanıcı' }}</h3>
+  </div>
+
+  <div class="sidebar-menu">
+    <button class="menu-item active">
+      <i class="fas fa-comments"></i>
+      <span>Sohbetler</span>
+    </button>
+    <button class="menu-item">
+      <i class="fas fa-user-friends"></i>
+      <span>Arkadaş Ekle</span>
+    </button>
+    <button class="menu-item">
+      <i class="fas fa-user-cog"></i>
+      <span>Profil Düzenle</span>
+    </button>
+    <button class="menu-item">
+      <i class="fas fa-cog"></i>
+      <span>Ayarlar</span>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+.main-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Router outlet içeriğinin boşluksuz olarak arkadaş listesinin yanına yapışması için */
+router-outlet + * {
+  flex: 1;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Router outlet boşluğunu temizleme */
+:host ::ng-deep router-outlet + * {
+  height: 100%;
+  display: flex;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+}

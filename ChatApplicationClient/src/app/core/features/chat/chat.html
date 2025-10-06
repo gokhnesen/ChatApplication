@@ -1,4 +1,13 @@
 <div class="chat-container">
+  <!-- Chat header with recipient info -->
+  <div class="chat-header" *ngIf="receiverUser">
+    <img [src]="receiverUser?.avatar || 'assets/default-avatar.png'" alt="avatar" class="header-avatar" />
+    <div class="header-info">
+      <h3>{{ receiverUser?.name || 'Chat' }}</h3>
+    </div>
+  </div>
+
+  <!-- Messages section -->
   <div class="messages">
     <div 
       *ngFor="let msg of messages" 
@@ -14,6 +23,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Message input form -->
   <form (ngSubmit)="sendMessage()" class="chat-form">
     <input [(ngModel)]="messageText" name="message" placeholder="Mesaj yaz..." required />
     <button type="submit">Gönder</button>

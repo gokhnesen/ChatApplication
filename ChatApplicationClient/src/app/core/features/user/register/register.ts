@@ -26,7 +26,7 @@ register() {
         localStorage.setItem('isAuthenticated', 'true');
         alert('Kayıt başarılı!');
         this.error = '';
-        // chat ekranına yönlendirme
+        
       } else {
         localStorage.setItem('isAuthenticated', 'false');
         this.error = res.message || 'Kayıt başarısız!';
