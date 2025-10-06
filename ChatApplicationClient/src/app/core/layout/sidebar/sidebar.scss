@@ -1,0 +1,76 @@
+.sidebar {
+  width: 80px; // Sabit genişlik
+  background-color: #1e2225;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 10; // z-index değerini yükselt
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative; // Pozisyon değerini ekle
+}
+
+// Hover genişlemesini kaldıralım
+// .sidebar:hover {
+//   width: 200px;
+// }
+
+.profile-section {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #4CAF50;
+}
+
+.sidebar h3 {
+  color: white;
+  font-size: 14px;
+  margin-top: 10px;
+  white-space: nowrap;
+}
+
+.sidebar-menu {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  color: #a0a0a0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.menu-item i {
+  font-size: 20px;
+  min-width: 30px;
+}
+
+.menu-item span {
+  margin-left: 15px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.menu-item:hover, .menu-item.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
