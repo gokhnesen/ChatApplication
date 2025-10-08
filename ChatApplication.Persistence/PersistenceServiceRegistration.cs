@@ -1,7 +1,9 @@
 ﻿using ChatApplication.Application.Interfaces;
+using ChatApplication.Application.Interfaces.Friend;
 using ChatApplication.Application.Interfaces.Message;
 using ChatApplication.Persistence.DbContext;
 using ChatApplication.Persistence.Repositories;
+using ChatApplication.Persistence.Repositories.Friend;
 using ChatApplication.Persistence.Repositories.Message;
 using ChatApplication.Persistence.Repositories.Messages;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +26,8 @@ namespace ChatApplication.Persistence
 
             services.AddScoped<IMessageReadRepository, MessageReadRepository>();
             services.AddScoped<IMessageWriteRepository, MessageWriteRepository>();
+            services.AddScoped<IFriendReadRepository, FriendReadRepository>();
+            services.AddScoped<IFriendWriteRepository, FriendWriteRepository>();
 
             services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
             services.AddScoped(typeof(IWriteRepository<>), typeof(WriteRepository<>));

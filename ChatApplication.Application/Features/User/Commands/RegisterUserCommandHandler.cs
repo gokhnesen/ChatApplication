@@ -55,7 +55,8 @@ namespace ChatApplication.Application.Features.User.Commands
                     UserName = request.Email,
                     Email = request.Email,
                     Name = request.Name ?? string.Empty,
-                    LastName = request.LastName ?? string.Empty
+                    LastName = request.LastName ?? string.Empty,
+                    ProfilePhotoUrl = request.ProfilePhotoUrl // Profil fotoğrafı URL'si
                 };
 
                 _logger.LogInformation("Creating user: {Email}, Name: {Name}, LastName: {LastName}", 

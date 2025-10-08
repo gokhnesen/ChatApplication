@@ -15,13 +15,10 @@
       class="friend-item"
       [class.active]="selectedFriend?.id === friend.id"
       (click)="selectFriend(friend)">
-      <img [src]="friend.avatar" alt="avatar" class="friend-avatar">
+      <img [src]="friend.avatarUrl || 'assets/default-avatar.png'" alt="avatar" class="friend-avatar">
       <div class="friend-info">
-        <h4>{{ friend.name }}</h4>
-        <p class="last-message">{{ friend.lastMessage || 'Henüz mesaj yok' }}</p>
-      </div>
-      <div class="friend-meta" *ngIf="friend.unread">
-        <span class="unread-badge">{{ friend.unread }}</span>
+        <h4>{{ friend.name }} {{ friend.lastName }}</h4>
+        <p class="friend-email">{{ friend.email }}</p>
       </div>
     </div>
   </div>
