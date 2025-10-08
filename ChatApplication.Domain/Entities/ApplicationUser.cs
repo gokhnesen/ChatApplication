@@ -1,10 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace ChatApplication.Domain.Entities
 {
@@ -13,5 +7,7 @@ namespace ChatApplication.Domain.Entities
         public string Name { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
 
+        // Profil fotoğrafı URL'si
+        public string? ProfilePhotoUrl { get; set; }
     }
 }

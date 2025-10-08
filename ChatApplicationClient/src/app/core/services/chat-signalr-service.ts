@@ -10,9 +10,11 @@ export class ChatSignalrService {
 
   startConnection(userId: string) {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('https://localhost:7055/chatHub',{accessTokenFactory: () => userId})
-    .withAutomaticReconnect()
+      .withUrl('https://localhost:7055/chathub', { accessTokenFactory: () => userId })
+      .withAutomaticReconnect()
       .build();
+
+    this.hubConnection.start().catch(err => console.error('SignalR start error:', err));
   }
 
   sendMessage(message: string, senderId: string, receiverId: string) {
