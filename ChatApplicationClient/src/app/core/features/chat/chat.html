@@ -7,17 +7,16 @@
     </div>
   </div>
 
-  <!-- Messages container - gerekli CSS sınıfları eklenmiş -->
+  <!-- Messages container -->
   <div class="messages">
-    <div 
-      *ngFor="let msg of messages" 
-      class="message-box" 
-      [ngClass]="{'own-message': isOwnMessage(msg)}">
-      <div class="message-content">
-        <div class="message-text">{{ msg.content }}</div>
-        <small>{{ msg.sentAt | date:'short' }}</small>
+    <ng-container *ngFor="let msg of messages">
+      <div class="message-box" [class.own-message]="isOwnMessage(msg)">
+        <div class="message-content">
+          <div class="message-text">{{ msg.content }}</div>
+          <small class="message-time">{{ msg.sentAt | date:'short' }}</small>
+        </div>
       </div>
-    </div>
+    </ng-container>
   </div>
 
   <!-- Message input form -->
