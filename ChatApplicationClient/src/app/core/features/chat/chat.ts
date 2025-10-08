@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject, effect } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MessageService } from '../../services/message-service';
 import { Message } from '../../shared/models/message';
 import { FriendService } from '../../services/friend-service';
+import { UserService } from '../../services/user-service';
 
 @Component({
   selector: 'app-chat',
@@ -22,13 +23,16 @@ export class Chat implements OnChanges, OnInit {
   
   messages: Message[] = [];
   messageText: string = '';
-  // Kullanıcı bilgisini gerçek uygulamada servislerden almalısınız
+  
+  // Initialize current user with default values
   currentUser = { 
-    id: 'df12090d-3907-4c83-8f1a-d52b32e55a6c', // Giriş yapan kullanıcının ID'si
-    name: 'Ben', 
-    avatar: 'https://i.pravatar.cc/40?img=3' 
+    id: '', 
+    name: '', 
+    avatar: 'assets/default-avatar.png' 
   };
 
+  private userService = inject(UserService);
+  
   constructor(
     private messageService: MessageService,
     private route: ActivatedRoute,
@@ -36,6 +40,47 @@ export class Chat implements OnChanges, OnInit {
   ) {}
 
   ngOnInit(): void {
+    // First check if we already have the current user in the signal
+    const signalUser = this.userService.currentUser();
+    
+    if (signalUser) {
+      // Use the user from the signal if available
+      this.setCurrentUserFromSignal(signalUser);
+      this.initializeChat();
+    } else {
+      // Otherwise, fetch the current user info
+      this.userService.getUserInfo().subscribe({
+        next: (userInfo) => {
+          if (userInfo) {
+            this.setCurrentUserFromSignal(userInfo);
+          }
+          this.initializeChat();
+        },
+        error: (error) => {
+          console.error('Error loading current user:', error);
+        }
+      });
+    }
+    
+    // Subscribe to changes in the currentUser signal using a signal effect
+    effect(() => {
+      const user = this.userService.currentUser();
+      if (user) {
+        this.setCurrentUserFromSignal(user);
+      }
+    });
+  }
+  
+  private setCurrentUserFromSignal(user: any): void {
+    this.currentUser = {
+      id: user.id,
+      name: user.name || user.userName || '',
+      avatar: user.profilePhotoUrl || 'assets/default-avatar.png'
+    };
+    console.log('Current user set:', this.currentUser);
+  }
+
+  private initializeChat(): void {
     // URL'den ID alınıyor mu kontrol et
     this.route.params.subscribe(params => {
       const friendId = params['id'];
@@ -75,19 +120,18 @@ export class Chat implements OnChanges, OnInit {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['receiverUser'] && changes['receiverUser'].currentValue && changes['receiverUser'].currentValue.id) {
       console.log('Receiver user changed:', this.receiverUser);
-      this.loadMessages();
+      // Only load messages if we already have the current user info
+      if (this.currentUser.id) {
+        this.loadMessages();
+      }
     }
   }
 
   loadMessages(): void {
-    if (this.receiverUser && this.receiverUser.id) {
+    if (this.receiverUser && this.receiverUser.id && this.currentUser.id) {
       console.log('ATTEMPTING TO LOAD MESSAGES between', this.currentUser.id, 'and', this.receiverUser.id);
-      // Hard-coded ID'leri test için kullan
-      const testUserId1 = 'df12090d-3907-4c83-8f1a-d52b32e55a6c';
-      const testUserId2 = '6d24208e-1ada-40c3-8aa3-e6cd9910257d';
       
-      // Test için sabit ID'leri kullan
-      this.messageService.getMessages( testUserId2,testUserId1)
+      this.messageService.getMessages(this.currentUser.id, this.receiverUser.id)
         .subscribe({
           next: (messages) => {
             console.log('Messages received:', messages);
@@ -98,12 +142,12 @@ export class Chat implements OnChanges, OnInit {
           }
         });
     } else {
-      console.warn('Cannot load messages: receiverUser.id is missing');
+      console.warn('Cannot load messages: receiverUser.id or currentUser.id is missing');
     }
   }
 
   sendMessage() {
-    if (this.messageText.trim() && this.receiverUser.id) {
+    if (this.messageText.trim() && this.receiverUser.id && this.currentUser.id) {
       const newMessage = {
         senderId: this.currentUser.id,
         receiverId: this.receiverUser.id,
@@ -122,7 +166,7 @@ export class Chat implements OnChanges, OnInit {
         }
       });
     } else {
-      console.warn('Cannot send message: Empty message or missing receiverId');
+      console.warn('Cannot send message: Empty message or missing receiverId/currentUserId');
     }
   }
 
