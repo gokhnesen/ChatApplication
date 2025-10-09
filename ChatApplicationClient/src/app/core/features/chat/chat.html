@@ -8,7 +8,7 @@
   </div>
 
   <!-- Messages container -->
-  <div class="messages">
+  <div class="messages" #messagesContainer>
     <ng-container *ngFor="let msg of messages">
       <div class="message-box" [class.own-message]="isOwnMessage(msg)">
         <div class="message-content">

@@ -1,10 +1,42 @@
 <form (ngSubmit)="register()" class="auth-form">
   <h2>Kayıt Ol</h2>
-  <input [(ngModel)]="name" name="name" type="text" placeholder="Ad" required />
-  <input [(ngModel)]="lastName" name="lastName" type="text" placeholder="Soyad" required />
+  
+  <div class="photo-upload-container" *ngIf="photoPreviewUrl || !selectedPhoto">
+    <div class="photo-preview" *ngIf="photoPreviewUrl">
+      <img [src]="photoPreviewUrl" alt="Profile Preview" />
+    </div>
+    <div class="photo-placeholder" *ngIf="!photoPreviewUrl">
+      <span>Profil Fotoğrafı</span>
+    </div>
+    <label for="photo-upload" class="photo-upload-button">Fotoğraf Seç</label>
+    <input 
+      type="file" 
+      id="photo-upload" 
+      accept="image/*" 
+      (change)="onPhotoSelected($event)" 
+      style="display:none;" />
+  </div>
+  
+  <div class="form-group">
+    <input [(ngModel)]="name" name="name" type="text" placeholder="Ad" required />
+  </div>
+  
+  <div class="form-group">
+    <input [(ngModel)]="lastName" name="lastName" type="text" placeholder="Soyad" required />
+  </div>
 
-  <input [(ngModel)]="email" name="email" type="email" placeholder="Email" required />
-  <input [(ngModel)]="password" name="password" type="password" placeholder="Şifre" required />
-  <button type="submit">Kayıt Ol</button>
+  <div class="form-group">
+    <input [(ngModel)]="email" name="email" type="email" placeholder="Email" required />
+  </div>
+  
+  <div class="form-group">
+    <input [(ngModel)]="password" name="password" type="password" placeholder="Şifre" required />
+  </div>
+  
+  <button type="submit" [disabled]="isUploading">
+    <span *ngIf="!isUploading">Kayıt Ol</span>
+    <span *ngIf="isUploading">Kaydediliyor...</span>
+  </button>
+  
   <div *ngIf="error" class="error">{{ error }}</div>
 </form>

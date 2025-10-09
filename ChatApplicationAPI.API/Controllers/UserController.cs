@@ -1,19 +1,86 @@
 ﻿using ChatApplication.Application.Features.User.Commands;
 using ChatApplication.Domain.Entities;
+using ChatApplication.Domain.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace ChatApplicationAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController(SignInManager<ApplicationUser> signInManager) : BaseController
+    public class UserController : BaseController
     {
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IWebHostEnvironment _environment;
+        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+        private const long MaxFileSize = 5 * 1024 * 1024; // 5 MB
+
+        public UserController(SignInManager<ApplicationUser> signInManager, IWebHostEnvironment environment)
+        {
+            _signInManager = signInManager;
+            _environment = environment;
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
         {
             var response = await Mediator.Send(command);
             return response.IsSuccess ? Ok(response) : BadRequest(response);
+        }
+
+        [HttpPost("upload-profile-photo")]
+        public async Task<IActionResult> UploadProfilePhoto([FromForm] ProfilePhotoUploadModelDto model)
+        {
+            try
+            {
+                if (model.Photo == null || model.Photo.Length == 0)
+                {
+                    return BadRequest(new { IsSuccess = false, Message = "Fotoğraf bulunamadı." });
+                }
+
+                if (model.Photo.Length > MaxFileSize)
+                {
+                    return BadRequest(new { IsSuccess = false, Message = "Dosya boyutu 5MB'dan büyük olamaz." });
+                }
+
+                var extension = Path.GetExtension(model.Photo.FileName).ToLowerInvariant();
+                if (!Array.Exists(_allowedExtensions, e => e == extension))
+                {
+                    return BadRequest(new { IsSuccess = false, Message = "Sadece .jpg, .jpeg, .png ve .gif dosyaları kabul edilmektedir." });
+                }
+
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "profiles");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.Photo.CopyToAsync(fileStream);
+                }
+
+                var url = $"/uploads/profiles/{fileName}";
+                
+                return Ok(new 
+                { 
+                    IsSuccess = true, 
+                    Message = "Fotoğraf başarıyla yüklendi.", 
+                    ProfilePhotoUrl = url 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { IsSuccess = false, Message = "Fotoğraf yüklenirken bir hata oluştu.", Error = ex.Message });
+            }
         }
 
         [HttpGet("auth-status")]
@@ -26,7 +93,7 @@ namespace ChatApplicationAPI.API.Controllers
         public async Task<ActionResult> GetUserInfo()
         {
             if (User.Identity?.IsAuthenticated == false) return NoContent();
-            var user = await signInManager.UserManager.GetUserAsync(User);
+            var user = await _signInManager.UserManager.GetUserAsync(User);
             return Ok(new
             {
                 user.Id,
@@ -35,7 +102,6 @@ namespace ChatApplicationAPI.API.Controllers
                 user.LastName,
                 user.Email,
                 user.ProfilePhotoUrl,
-
             });
         }
     }

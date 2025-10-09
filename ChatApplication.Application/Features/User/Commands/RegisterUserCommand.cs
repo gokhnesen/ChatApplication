@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 
 namespace ChatApplication.Application.Features.User.Commands
 {
@@ -12,4 +13,10 @@ namespace ChatApplication.Application.Features.User.Commands
         // Profil fotoğrafı URL'si
         public string? ProfilePhotoUrl { get; set; }
     }
+
+    public class ProfilePhotoUploadModelDto
+    {
+        public IFormFile Photo { get; set; } = null!;
+    }
+
 }

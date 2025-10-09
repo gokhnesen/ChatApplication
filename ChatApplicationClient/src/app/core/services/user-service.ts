@@ -16,7 +16,6 @@ export class UserService {
 
   constructor() {
     if (this.isBrowser()) {
-      // Sayfa yüklendiğinde kullanıcı bilgilerini kontrol et
       this.checkCurrentUser();
     }
   }
@@ -25,7 +24,6 @@ export class UserService {
     return isPlatformBrowser(this.platformId);
   }
 
-  // LocalStorage'da veya signal'de kullanıcı var mı kontrol et, yoksa API'den al
   private checkCurrentUser(): void {
     if (this.currentUser()) return; // Zaten yüklüyse işlem yapma
 
@@ -98,4 +96,11 @@ export class UserService {
       })
     );
   }
+
+  uploadProfilePhoto(file: File): Observable<any> {
+  const formData = new FormData();
+  formData.append('photo', file);
+  
+  return this.http.post(`${this.apiUrl}user/upload-profile-photo`, formData);
+}
 }
