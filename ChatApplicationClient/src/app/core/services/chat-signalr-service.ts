@@ -17,10 +17,6 @@ export class ChatSignalrService {
     this.hubConnection.start().catch(err => console.error('SignalR start error:', err));
   }
 
-  sendMessage(message: string, senderId: string, receiverId: string) {
-    return this.hubConnection.invoke('SendMessage', senderId, receiverId, message);
-  }
-
   onReceiveMessage(callback: (senderId: string, content: string) => void){
     this.hubConnection.on('ReceiveMessage',callback);
   }

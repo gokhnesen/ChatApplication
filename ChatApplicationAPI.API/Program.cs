@@ -63,6 +63,7 @@ namespace ChatApplicationAPI.API
             app.UseCors();
             app.UseHttpsRedirection();
             app.UseAuthorization();
+            app.UseStaticFiles(); 
             app.MapControllers();
             app.MapHub<ChatHub>("/chathub");
             app.MapGroup("api").MapIdentityApi<ApplicationUser>();

@@ -56,7 +56,7 @@ namespace ChatApplication.Application.Features.User.Commands
                     Email = request.Email,
                     Name = request.Name ?? string.Empty,
                     LastName = request.LastName ?? string.Empty,
-                    ProfilePhotoUrl = request.ProfilePhotoUrl // Profil fotoğrafı URL'si
+                    ProfilePhotoUrl = request.ProfilePhotoUrl 
                 };
 
                 _logger.LogInformation("Creating user: {Email}, Name: {Name}, LastName: {LastName}", 
@@ -66,7 +66,6 @@ namespace ChatApplication.Application.Features.User.Commands
 
                 if(result.Succeeded)
                 {
-                    // Explicitly fetch the user again to ensure ID is populated
                     var createdUser = await _userManager.FindByEmailAsync(newUser.Email);
                     
                     _logger.LogInformation("User created successfully - ID: {Id}", createdUser?.Id ?? "null");
