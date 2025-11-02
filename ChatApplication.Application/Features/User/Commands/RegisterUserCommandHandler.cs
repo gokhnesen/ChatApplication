@@ -1,6 +1,7 @@
 ﻿using ChatApplication.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,26 @@ namespace ChatApplication.Application.Features.User.Commands
         {
             _userManager = userManager;
             _logger = logger;
+        }
+
+        private async Task<string> GenerateUniqueFriendCodeAsync()
+        {
+            Random random = new Random();
+            string friendCode;
+            bool isUnique = false;
+
+            do
+            {
+                friendCode = random.Next(10000, 100000).ToString();
+
+                var existingUser = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.FriendCode == friendCode);
+
+                isUnique = existingUser == null;
+
+            } while (!isUnique);
+
+            return friendCode;
         }
 
         public async Task<RegisterUserCommandResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -56,7 +77,8 @@ namespace ChatApplication.Application.Features.User.Commands
                     Email = request.Email,
                     Name = request.Name ?? string.Empty,
                     LastName = request.LastName ?? string.Empty,
-                    ProfilePhotoUrl = request.ProfilePhotoUrl 
+                    ProfilePhotoUrl = request.ProfilePhotoUrl,
+                    FriendCode = await GenerateUniqueFriendCodeAsync()
                 };
 
                 _logger.LogInformation("Creating user: {Email}, Name: {Name}, LastName: {LastName}", 
@@ -93,7 +115,6 @@ namespace ChatApplication.Application.Features.User.Commands
             {
 
                 _logger.LogError(ex, "Kullanıcı oluşturulurken beklenmeyen bir hata oluştu: {Message}", ex.Message);
-                // Log inner exception if available
                 if (ex.InnerException != null)
                 {
                     _logger.LogError("Inner exception: {Message}", ex.InnerException.Message);

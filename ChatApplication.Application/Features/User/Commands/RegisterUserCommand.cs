@@ -10,7 +10,7 @@ namespace ChatApplication.Application.Features.User.Commands
         public string Name { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
 
-        // Profil fotoğrafı URL'si
+ 
         public string? ProfilePhotoUrl { get; set; }
     }
 

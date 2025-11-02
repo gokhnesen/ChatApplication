@@ -132,3 +132,32 @@
 .chat-form button:hover {
   background: #3d8b40;
 }
+
+.unread-badge {
+  background: #ff4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.read-indicator {
+  font-size: 12px;
+  margin-left: 5px;
+  
+  .read-icon {
+    color: #4CAF50;
+  }
+  
+  .unread-icon {
+    color: #999;
+  }
+}

@@ -2,6 +2,7 @@
 using ChatApplication.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -32,8 +33,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
         {
             try
             {
-                _logger.LogInformation("Friend isteği işleniyor: {SenderId} -> {ReceiverId}", 
-                    request.SenderId, request.ReceiverId);
+                _logger.LogInformation("Friend isteği işleniyor: {SenderId}", request.SenderId);
 
                 var sender = await _userManager.FindByIdAsync(request.SenderId);
                 if (sender == null)
@@ -46,18 +46,49 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
                     };
                 }
 
-                var receiver = await _userManager.FindByIdAsync(request.ReceiverId);
-                if (receiver == null)
+                ApplicationUser receiver;
+                if (!string.IsNullOrEmpty(request.FriendCode))
+                {
+                    receiver = await _userManager.Users.FirstOrDefaultAsync(u => u.FriendCode == request.FriendCode);
+                    if (receiver == null)
+                    {
+                        return new SendFriendRequestResponse
+                        {
+                            IsSuccess = false,
+                            Message = "Bu arkadaşlık koduna sahip kullanıcı bulunamadı.",
+                            Errors = new List<string> { "User with this friend code not found" }
+                        };
+                    }
+                    // Receiver ID'yi friend code ile bulunan kullanıcının ID'si ile güncelle
+                    request.ReceiverId = receiver.Id;
+                }
+                else
+                {
+                    // Eğer friend code yoksa, receiver ID ile kullanıcıyı bul
+                    receiver = await _userManager.FindByIdAsync(request.ReceiverId);
+                    if (receiver == null)
+                    {
+                        return new SendFriendRequestResponse
+                        {
+                            IsSuccess = false,
+                            Message = "Alıcı kullanıcı bulunamadı.",
+                            Errors = new List<string> { "Receiver not found" }
+                        };
+                    }
+                }
+
+                // Kendine arkadaşlık isteği göndermeyi engelle
+                if (sender.Id == receiver.Id)
                 {
                     return new SendFriendRequestResponse
                     {
                         IsSuccess = false,
-                        Message = "Alıcı kullanıcı bulunamadı.",
-                        Errors = new List<string> { "Receiver not found" }
+                        Message = "Kendinize arkadaşlık isteği gönderemezsiniz.",
+                        Errors = new List<string> { "Cannot send friend request to yourself" }
                     };
                 }
 
-                var existingFriendship = await _friendReadRepository.GetFriendRequestAsync(request.SenderId, request.ReceiverId);
+                var existingFriendship = await _friendReadRepository.GetFriendRequestAsync(request.SenderId, receiver.Id);
                 if (existingFriendship != null)
                 {
                     return new SendFriendRequestResponse
@@ -71,7 +102,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
                 var friendship = new Domain.Entities.Friend
                 {
                     SenderId = request.SenderId,
-                    ReceiverId = request.ReceiverId,
+                    ReceiverId = receiver.Id,
                     Status = FriendStatus.Beklemede,
                     RequestDate = DateTime.UtcNow
                 };

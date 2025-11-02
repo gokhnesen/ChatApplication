@@ -6,8 +6,7 @@ namespace ChatApplication.Domain.Entities
     {
         public string Name { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-
-        // Profil fotoğrafı URL'si
+        public string FriendCode { get; set; }
         public string? ProfilePhotoUrl { get; set; }
     }
 }

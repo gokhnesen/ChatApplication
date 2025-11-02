@@ -37,6 +37,9 @@ namespace ChatApplication.Application.Features.Messages.Commands
 
             await _hubContext.Clients.User(request.ReceiverId)
                 .SendAsync("ReceiveMessage", request.SenderId, request.Content);
+            // Göndericiye de bildir (birden fazla cihaz için)
+            await _hubContext.Clients.User(request.SenderId)
+                .SendAsync("MessageSent", request.ReceiverId, request.Content, cancellationToken);
 
             return new SendMessageCommandResponse
             {
