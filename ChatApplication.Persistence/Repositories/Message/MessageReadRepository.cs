@@ -37,5 +37,29 @@ namespace ChatApplication.Persistence.Repositories.Message
             
             return messages;
         }
+
+        public async Task<int> GetUnreadMessageCountAsync(string userId)
+        {
+            return await Table
+        .CountAsync(m => m.ReceiverId == userId && !m.IsRead);
+        }
+
+        public async Task<List<Domain.Entities.Message>> GetUnreadMessagesAsync(string userId)
+        {
+            return await Table
+    .Include(m => m.Sender)
+    .Where(m => m.ReceiverId == userId && !m.IsRead)
+    .OrderByDescending(m => m.SentAt)
+    .ToListAsync();
+        }
+
+        public async Task<Domain.Entities.Message?> GetLatestMessageAsync(string userId1, string userId2)
+        {
+            return await Table
+                .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
+                           (m.SenderId == userId2 && m.ReceiverId == userId1))
+                .OrderByDescending(m => m.SentAt)
+                .FirstOrDefaultAsync();
+        }
     }
 }

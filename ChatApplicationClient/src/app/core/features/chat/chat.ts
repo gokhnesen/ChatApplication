@@ -36,8 +36,13 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
+  private messageBroadcast = inject(MessageService);
   private subscriptions: Subscription[] = [];
   
+  unreadCount: number = 0;
+
+  private hasMarkedAsRead = false; // Yeni flag ekle
+
   constructor(
     private messageService: MessageService,
     private route: ActivatedRoute,
@@ -79,23 +84,57 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
+  ngAfterViewChecked() {
+    this.scrollToBottom();
+    // Sadece bir kez işaretle
+    if (!this.hasMarkedAsRead) {
+      this.markMessagesAsRead();
+    }
+  }
+
+  private markMessagesAsRead(): void {
+    const unreadMessages = this.messages.filter(
+      m => !m.isRead && m.receiverId === this.currentUser.id && m.senderId === this.receiverUser.id
+    );
+
+    if (unreadMessages.length > 0) {
+      this.hasMarkedAsRead = true;
+      
+      // Backend'in beklediği format: userId ve senderId
+      this.messageService.markAsRead(this.currentUser.id, this.receiverUser.id).subscribe({
+        next: (response) => {
+          // Local state'i güncelle
+          unreadMessages.forEach(m => {
+            m.isRead = true;
+            m.readAt = new Date();
+          });
+          this.unreadCount = response.unreadCount || 0;
+          
+          // SignalR bildirimi (opsiyonel - backend zaten gönderiyor)
+          if (this.signalRService.isConnected()) {
+            const messageIds = unreadMessages.map(m => m.id);
+            this.signalRService.notifyMessagesRead(messageIds);
+          }
+        },
+        error: () => {
+          this.hasMarkedAsRead = false;
+        }
+      });
+    }
+  }
+
   private initializeSignalR(): void {
     if (!this.currentUser.id) {
-      console.error('Cannot initialize SignalR: currentUser.id is missing');
       return;
     }
 
-    // Start SignalR connection
     this.signalRService.startConnection(this.currentUser.id);
     
-    // Set up message receiver
+    // Başkasından mesaj geldiğinde
     this.signalRService.onReceiveMessage((senderId: string, content: string) => {
-      console.log('Live message received from:', senderId, 'content:', content);
-      
-      // Only add message if it's from the current chat
-      if (senderId === this.receiverUser.id || senderId === this.currentUser.id) {
+      if (senderId === this.receiverUser.id) {
         const newMessage: Message = {
-          id: Date.now().toString(), // Temporary ID - will be replaced with actual ID from database
+          id: Date.now().toString(),
           senderId: senderId,
           receiverId: this.currentUser.id,
           content: content,
@@ -106,6 +145,29 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         this.messages.push(newMessage);
         setTimeout(() => this.scrollToBottom(), 0);
       }
+      
+      // Friends component'e bildir (her durumda)
+      this.messageBroadcast.notifyNewMessage({
+        friendId: senderId,
+        content: content,
+        senderId: senderId,
+        receiverId: this.currentUser.id,
+        sentAt: new Date(),
+        isOwn: false
+      });
+    });
+
+    this.signalRService.onMessageRead((messageIds: string[]) => {
+      this.messages.forEach(m => {
+        if (messageIds.includes(m.id)) {
+          m.isRead = true;
+          m.readAt = new Date();
+        }
+      });
+    });
+
+    this.signalRService.onUnreadCountUpdate((count: number) => {
+      this.unreadCount = count;
     });
   }
 
@@ -124,26 +186,24 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         const friendId = params['id'];
         console.log('Route params ID:', friendId);
         
-        if (friendId) {
-          if (!this.receiverUser.id) {
-            this.subscriptions.push(
-              this.friendService.getMyFriends().subscribe(friends => {
-                const friend = friends.find(f => f.id === friendId);
-                if (friend) {
-                  this.receiverUser = {
-                    id: friend.id,
-                    name: friend.name || '',
-                    lastName: friend.lastName,
-                    avatar: friend.avatarUrl || 'assets/default-avatar.png'
-                  };
-                  console.log('Friend found and set as receiver:', this.receiverUser);
-                  this.loadMessages();
-                }
-              })
-            );
-          } else {
-            this.loadMessages();
-          }
+        if (friendId && friendId !== this.receiverUser.id) {
+          this.subscriptions.push(
+            this.friendService.getMyFriends().subscribe(friends => {
+              const friend = friends.find(f => f.id === friendId);
+              if (friend) {
+                this.receiverUser = {
+                  id: friend.id,
+                  name: friend.name || '',
+                  lastName: friend.lastName,
+                  avatar: friend.avatarUrl || 'assets/default-avatar.png'
+                };
+                console.log('Friend found and set as receiver:', this.receiverUser);
+                
+                this.messages = [];
+                this.loadMessages();
+              }
+            })
+          );
         }
       })
     );
@@ -174,85 +234,69 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
   
-  ngAfterViewChecked() {
-    this.scrollToBottom();
-  }
-
   loadMessages(): void {
     if (this.receiverUser && this.receiverUser.id && this.currentUser.id) {
-      console.log('ATTEMPTING TO LOAD MESSAGES between', this.currentUser.id, 'and', this.receiverUser.id);
+      this.hasMarkedAsRead = false; // Yeni mesajlar yüklendiğinde flag'i sıfırla
       
       this.subscriptions.push(
         this.messageService.getMessages(this.currentUser.id, this.receiverUser.id)
           .subscribe({
             next: (messages) => {
-              console.log('Messages received:', messages);
               this.messages = messages;
+              this.calculateUnreadCount();
               setTimeout(() => this.scrollToBottom(), 0);
             },
-            error: (error) => {
-              console.error('Error loading messages:', error);
-            }
+            error: () => {}
           })
       );
-    } else {
-      console.warn('Cannot load messages: receiverUser.id or currentUser.id is missing');
     }
   }
-
- sendMessage() {
-  if (this.messageText.trim() && this.receiverUser.id && this.currentUser.id) {
-    const messageContent = this.messageText.trim();
-    
-    const newMessage = {
-      senderId: this.currentUser.id,
-      receiverId: this.receiverUser.id,
-      content: messageContent
-    };
-    
-    this.messageService.sendMessage(newMessage).subscribe({
-      next: (response) => {
-        console.log('Message saved to database:', response);
-        const localMessage: Message = {
-          id: response.id || Date.now().toString(),
-          senderId: this.currentUser.id,
-          receiverId: this.receiverUser.id,
-          content: messageContent,
-          sentAt: new Date(),
-          isRead: false
-        };
-        this.messages.push(localMessage);
-        this.messageText = '';
-        setTimeout(() => this.scrollToBottom(), 0);
-      },
-      error: (error) => {
-        console.error('Error saving message to database:', error);
-      }
-    });
-  }
-}
   
-  private sendMessageViaHttp() {
+  private calculateUnreadCount(): void {
+    this.unreadCount = this.messages.filter(
+      m => !m.isRead && m.receiverId === this.currentUser.id
+    ).length;
+  }
+
+  sendMessage() {
     if (this.messageText.trim() && this.receiverUser.id && this.currentUser.id) {
+      const messageContent = this.messageText.trim();
+      
       const newMessage = {
         senderId: this.currentUser.id,
         receiverId: this.receiverUser.id,
-        content: this.messageText
+        content: messageContent
       };
       
-      console.log('Sending message via HTTP:', newMessage);
       this.messageService.sendMessage(newMessage).subscribe({
         next: (response) => {
-          console.log('Message sent successfully:', response);
-          this.loadMessages();
+          const localMessage: Message = {
+            id: response.id || Date.now().toString(),
+            senderId: this.currentUser.id,
+            receiverId: this.receiverUser.id,
+            content: messageContent,
+            sentAt: new Date(),
+            isRead: false
+          };
+          this.messages.push(localMessage);
           this.messageText = '';
+          setTimeout(() => this.scrollToBottom(), 0);
+          
+          // Friends component'e bildir
+          this.messageBroadcast.notifyNewMessage({
+            friendId: this.receiverUser.id,
+            content: messageContent,
+            senderId: this.currentUser.id,
+            receiverId: this.receiverUser.id,
+            sentAt: new Date(),
+            isOwn: true
+          });
         },
-        error: (error) => {
-          console.error('Error sending message:', error);
-        }
+        error: () => {}
       });
     }
   }
+
 
   isOwnMessage(message: Message): boolean {
     return message.senderId === this.currentUser.id;

@@ -4,6 +4,7 @@
     <img [src]="receiverUser?.avatar || 'https://via.placeholder.com/40'" alt="avatar" class="header-avatar" />
     <div class="header-info">
       <h3>{{ receiverUser?.name }} {{ receiverUser?.lastName }}</h3>
+      <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }} okunmamış</span>
     </div>
   </div>
 
@@ -13,7 +14,15 @@
       <div class="message-box" [class.own-message]="isOwnMessage(msg)">
         <div class="message-content">
           <div class="message-text">{{ msg.content }}</div>
-          <small class="message-time">{{ msg.sentAt | date:'short' }}</small>
+          <div class="message-footer">
+            <small class="message-time">{{ msg.sentAt | date:'short' }}</small>
+            <!-- Kendi mesajlarımız için okundu göstergesi -->
+            <span class="read-indicator" *ngIf="isOwnMessage(msg)">
+              <i [class]="msg.isRead ? 'read-icon' : 'unread-icon'">
+                {{ msg.isRead ? '✓✓' : '✓' }}
+              </i>
+            </span>
+          </div>
         </div>
       </div>
     </ng-container>

@@ -7,5 +7,6 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
     {
         public string SenderId { get; set; } = string.Empty;
         public string ReceiverId { get; set; } = string.Empty;
+        public string FriendCode { get; set; } = string.Empty;
     }
 }

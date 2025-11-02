@@ -17,5 +17,9 @@ namespace ChatApplication.Domain.Entities
         public DateTime SentAt { get; set; } = DateTime.UtcNow;
 
         public bool IsRead { get; set; } = false;
+
+        public ApplicationUser Sender { get; set; }
+
+        public ApplicationUser Receiver { get; set; }
     }
 }

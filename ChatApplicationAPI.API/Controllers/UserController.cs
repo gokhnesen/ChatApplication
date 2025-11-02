@@ -1,6 +1,5 @@
 ﻿using ChatApplication.Application.Features.User.Commands;
 using ChatApplication.Domain.Entities;
-using ChatApplication.Domain.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;

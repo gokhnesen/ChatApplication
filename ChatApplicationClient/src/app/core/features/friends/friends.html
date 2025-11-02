@@ -14,12 +14,32 @@
       *ngFor="let friend of filteredFriends" 
       class="friend-item"
       [class.active]="selectedFriend?.id === friend.id"
+      [class.has-unread]="friend.unreadMessageCount && friend.unreadMessageCount > 0"
       (click)="selectFriend(friend)">
+      
       <img [src]="friend.avatarUrl || 'assets/default-avatar.png'" alt="avatar" class="friend-avatar">
+      
       <div class="friend-info">
-        <h4>{{ friend.name }} {{ friend.lastName }}</h4>
-        <p class="friend-email">{{ friend.email }}</p>
+        <div class="friend-header">
+          <h4>{{ friend.name }} {{ friend.lastName }}</h4>
+          <span class="last-message-time">{{ getLastMessageTime(friend) }}</span>
+        </div>
+        
+        <div class="friend-footer">
+          <p class="last-message" 
+             [class.unread]="isLastMessageUnread(friend)">
+            {{ getLastMessagePreview(friend) }}
+          </p>
+          
+          <span class="unread-badge" *ngIf="friend.unreadMessageCount && friend.unreadMessageCount > 0">
+            {{ friend.unreadMessageCount }}
+          </span>
+        </div>
       </div>
+    </div>
+
+    <div *ngIf="filteredFriends.length === 0" class="no-friends">
+      <p>{{ searchText ? 'Arkadaş bulunamadı' : 'Henüz arkadaşınız yok' }}</p>
     </div>
   </div>
 </div>

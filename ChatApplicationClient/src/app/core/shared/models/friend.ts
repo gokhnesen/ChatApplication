@@ -14,12 +14,20 @@ export type Friend = {
     email: string;
     userName: string;
     avatarUrl?: string;
-}
+    unreadMessageCount?: number;
+};
 
 export enum FriendStatus {
     Beklemede = 'Beklemede',
     Onaylandi = 'Onaylandi',
     Rededildi = 'Rededildi',
     Engellendi = 'Engellendi'
+}
+
+export interface LastMessage {
+  content: string;
+  sentAt: Date;
+  isRead: boolean;
+  senderId: string;
 }
 
