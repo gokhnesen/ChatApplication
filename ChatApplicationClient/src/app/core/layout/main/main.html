@@ -1,10 +1,9 @@
 <div class="main-container">
-  <!-- Sidebar component -->
   <app-sidebar></app-sidebar>
 
-  <!-- Friends component -->
-  <app-friends></app-friends>
+  <app-friends *ngIf="showFriends"></app-friends>
+  
+  <app-add-friends *ngIf="showAddFriends"></app-add-friends>
 
-  <!-- Router outlet -->
   <router-outlet></router-outlet>
 </div>

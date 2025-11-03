@@ -1,4 +1,5 @@
 ﻿using ChatApplication.Application.Features.User.Commands;
+using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -102,6 +103,25 @@ namespace ChatApplicationAPI.API.Controllers
                 user.Email,
                 user.ProfilePhotoUrl,
             });
+        }
+
+        [HttpGet("list")]
+        public async Task<IActionResult> GetUsers(
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? excludeUserId = null,
+            [FromQuery] int? pageNumber = null,
+            [FromQuery] int? pageSize = null)
+        {
+            var query = new GetUsersQuery
+            {
+                SearchTerm = searchTerm,
+                ExcludeUserId = excludeUserId,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            var response = await Mediator.Send(query);
+            return Ok(new { IsSuccess = true, Data = response });
         }
     }
 }

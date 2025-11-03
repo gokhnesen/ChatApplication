@@ -1,0 +1,45 @@
+<div class="add-friends-wrapper">
+  <div class="add-friends-section">
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text"
+        [(ngModel)]="searchText"
+        (input)="onSearchChange()"
+        placeholder="İsim, kullanıcı adı veya arkadaş kodu ile ara..."
+        class="search-input">
+      <i *ngIf="isLoading" class="fas fa-spinner fa-spin"></i>
+    </div>
+
+    <div class="users-list">
+      <!-- Boş durum - Arama yapılmadı -->
+      <div *ngIf="searchText.trim().length === 0" class="empty-state">
+        <i class="fas fa-user-friends"></i>
+        <p>Arkadaş aramak için isim, email veya arkadaş kodu yazın</p>
+      </div>
+
+      <!-- Boş durum - Sonuç bulunamadı -->
+      <div *ngIf="searchText.trim().length > 0 && users.length === 0 && !isLoading" class="empty-state">
+        <i class="fas fa-search"></i>
+        <p>Kullanıcı bulunamadı</p>
+      </div>
+
+      <!-- Kullanıcı listesi -->
+      <div *ngFor="let user of users" class="user-item" (click)="selectUser(user)">
+        <img [src]="getUserAvatar(user)" alt="avatar" class="user-avatar">
+        <div class="user-info">
+          <h4>{{ user.name }} {{ user.lastName }}</h4>
+          <p>@{{ user.userName }}</p>
+          <span class="friend-code">Kod: {{ user.friendCode }}</span>
+        </div>
+        <button class="add-btn" (click)="addFriend(user); $event.stopPropagation()">
+          <i class="fas fa-user-plus"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-section">
+    <router-outlet></router-outlet>
+  </div>
+</div>
