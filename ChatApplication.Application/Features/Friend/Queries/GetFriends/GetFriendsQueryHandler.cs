@@ -10,14 +10,14 @@ using ChatApplication.Domain.Entities;
 
 namespace ChatApplication.Application.Features.Friend.Queries.GetFriends
 {
-    public class GetFriendsHandler : IRequestHandler<GetFriendsQuery, List<GetFriendsResponse>>
+    public class GetFriendsQueryHandler : IRequestHandler<GetFriendsQuery, List<GetFriendsResponse>>
     {
         private readonly IFriendReadRepository _friendReadRepository;
-        private readonly ILogger<GetFriendsHandler> _logger;
+        private readonly ILogger<GetFriendsQueryHandler> _logger;
 
-        public GetFriendsHandler(
+        public GetFriendsQueryHandler(
             IFriendReadRepository friendReadRepository,
-            ILogger<GetFriendsHandler> logger)
+            ILogger<GetFriendsQueryHandler> logger)
         {
             _friendReadRepository = friendReadRepository;
             _logger = logger;

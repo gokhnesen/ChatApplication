@@ -1,65 +1,39 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { map, Observable, of, tap, catchError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, signal, effect } from '@angular/core';
+import { Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { User } from '../shared/models/user';
-import { isPlatformBrowser } from '@angular/common';
-import { PLATFORM_ID } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'https://localhost:7055/api/';
-  private http = inject(HttpClient);
-  private platformId = inject(PLATFORM_ID);
-  currentUser = signal<User | null>(null);
+  private apiUrl = 'https://localhost:7055/api';
+  currentUser = signal<any>(null);
 
-  constructor() {
-    if (this.isBrowser()) {
-      this.checkCurrentUser();
-    }
-  }
-
-  private isBrowser(): boolean {
-    return isPlatformBrowser(this.platformId);
-  }
-
-  private checkCurrentUser(): void {
-    if (this.currentUser()) return; // Zaten yüklüyse işlem yapma
-
-    if (this.isBrowser()) {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          this.currentUser.set(user);
-          console.log('User loaded from localStorage:', user);
-        } catch (error) {
-          console.error('Error parsing stored user', error);
-          localStorage.removeItem('currentUser');
-          this.getUserInfo().subscribe(); // Hata durumunda API'den tekrar al
-        }
-      } else {
-        // LocalStorage'da yoksa API'den kontrol et
-        this.getUserInfo().subscribe();
-      }
-    }
+  constructor(
+    private httpClient: HttpClient,
+    private router: Router
+  ) {
+    effect(() => {
+      const user = this.currentUser();
+    });
   }
 
   register(values: any) {
-    return this.http.post(this.apiUrl + 'user/register', values, {withCredentials:true});
+    return this.httpClient.post(this.apiUrl + '/user/register', values, { withCredentials: true });
   }
 
   getAuthStatus(): Observable<{ isAuthenticated: boolean }> {
-    return this.http.get<{ isAuthenticated: boolean }>(`${this.apiUrl}auth-status`);
+    return this.httpClient.get<{ isAuthenticated: boolean }>(`${this.apiUrl}/auth-status`);
   }
 
   login(values: any) {
-    const params = new HttpParams().append('useCookies', true);
-    return this.http.post<User>(this.apiUrl + 'login', values, { params, withCredentials: true }).pipe(
+    return this.httpClient.post<User>(this.apiUrl + '/login', values, { withCredentials: true }).pipe(
       tap(user => {
         this.currentUser.set(user);
-        if (this.isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('currentUser', JSON.stringify(user));
         }
       })
@@ -67,10 +41,10 @@ export class UserService {
   }
 
   getUserInfo() {
-    return this.http.get<User>(this.apiUrl + 'user/user-info', { withCredentials: true }).pipe(
+    return this.httpClient.get<User>(this.apiUrl + '/user/user-info', { withCredentials: true }).pipe(
       map(user => {
         this.currentUser.set(user);
-        if (this.isBrowser()) {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('currentUser', JSON.stringify(user));
         }
         return user;
@@ -82,14 +56,12 @@ export class UserService {
     );
   }
 
- 
-
   logout() {
     this.currentUser.set(null);
-    if (this.isBrowser()) {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem('currentUser');
     }
-    return this.http.post(`${this.apiUrl}logout`, {}, {withCredentials: true}).pipe(
+    return this.httpClient.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).pipe(
       catchError(error => {
         console.error('Logout error:', error);
         return of(null);
@@ -98,9 +70,13 @@ export class UserService {
   }
 
   uploadProfilePhoto(file: File): Observable<any> {
-  const formData = new FormData();
-  formData.append('photo', file);
-  
-  return this.http.post(`${this.apiUrl}user/upload-profile-photo`, formData);
-}
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    return this.httpClient.post(`${this.apiUrl}/user/upload-profile-photo`, formData);
+  }
+
+  searchUsers(searchTerm: string): Observable<any> {
+    return this.httpClient.get(`${this.apiUrl}/User/list?searchTerm=${searchTerm}`);
+  }
 }
