@@ -1,7 +1,18 @@
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
+import { UserService } from './user-service';
 import { Friend } from '../shared/models/friend';
+
+export interface PendingFriendRequest {
+  friendshipId: string;
+  senderId: string;
+  senderName: string;
+  senderLastName: string;
+  senderEmail: string;
+  requestDate: string;
+  senderPhotoUrl: string | null; // yeni alan
+}
 
 @Injectable({
   providedIn: 'root'
@@ -9,20 +20,46 @@ import { Friend } from '../shared/models/friend';
 export class FriendService {
     private apiUrl = 'https://localhost:7055/api';
     private httpClient = inject(HttpClient);
-
-    sendFriendRequest(command: any): Observable<any> {
-        return this.httpClient.post<any>(`${this.apiUrl}/friend/send-request`, command);
-    }
+    private userService = inject(UserService);
 
     respondToFriendRequest(command: any): Observable<any> {
-        return this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, command);
+        return this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, command, { withCredentials: true });
     }
 
     getMyFriends(): Observable<Friend[]> {
-        return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/my-friends`);
+        return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/my-friends`, { withCredentials: true });
     }
 
-    getPendingRequests(): Observable<Friend[]> {
-        return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/pending-requests`);
+    getPendingRequests(): Observable<PendingFriendRequest[]> {
+      return this.httpClient.get<PendingFriendRequest[]>(
+        `${this.apiUrl}/friend/pending-requests`,
+        { withCredentials: true }
+      );
+    }
+
+    sendFriendRequest(target: { receiverId?: string; friendCode?: string }): Observable<any> {
+      const url = `${this.apiUrl}/Friend/send-request`;
+      const post = (senderId: string) => {
+        const payload: any = { senderId };
+        if (target.receiverId) payload.receiverId = target.receiverId;
+        if (target.friendCode) payload.friendCode = target.friendCode;
+        return this.httpClient.post(url, payload, { withCredentials: true });     
+      };
+
+      const me = this.userService.currentUser();
+      if (me?.id) {
+        return post(me.id);
+      }
+      return this.userService.getUserInfo().pipe(
+        switchMap(u => post(u.id))
+      );
+    }
+    respondToFriendRequestById(friendshipId: string, accept: boolean): Observable<any> {
+      const me = this.userService.currentUser();
+      const post = (receiverId: string) =>
+        this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, { friendshipId, receiverId, accept }, { withCredentials: true });
+
+      if (me?.id) return post(me.id);
+      return this.userService.getUserInfo().pipe(switchMap(u => post(u.id)));
     }
 }

@@ -36,6 +36,7 @@ namespace ChatApplication.Application.Features.Friend.Queries.GetPendingRequests
                     SenderId = fr.SenderId,
                     SenderName = fr.Sender?.Name ?? string.Empty,
                     SenderLastName = fr.Sender?.LastName ?? string.Empty,
+                    SenderProfilePhotoUrl = fr.Sender?.ProfilePhotoUrl ?? string.Empty,
                     SenderEmail = fr.Sender?.Email ?? string.Empty,
                     RequestDate = fr.RequestDate
                 }).ToList();

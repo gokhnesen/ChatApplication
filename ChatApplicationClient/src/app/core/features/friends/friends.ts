@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
@@ -33,6 +33,10 @@ export class Friends implements OnInit, OnDestroy {
   private ngZone = inject(NgZone);
   private subscriptions: Subscription[] = [];
 
+  // Init tekrar etmesin diye
+  private initialized = false;
+  private pendingFriendId: string | null = null;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -40,22 +44,55 @@ export class Friends implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Route paramını her zaman al, arkadaşlar gelince seçebilmek için sakla
+    this.subscriptions.push(
+      this.route.paramMap.subscribe((params: ParamMap) => {
+        this.pendingFriendId = params.get('id');
+        if (this.pendingFriendId && this.friends.length) {
+          const f = this.friends.find(x => x.id === this.pendingFriendId);
+          if (f) {
+            this.selectedFriend = f;
+            this.cdr.detectChanges();
+          }
+        }
+      })
+    );
+
+    // 1) Sinyalde kullanıcı varsa hemen başlat
     const user = this.userService.currentUser();
     if (user) {
       this.currentUserId = user.id;
-      this.loadFriendsWithMessages();
-      this.initializeListeners();
+      this.initAfterUser();
+    } else {
+      // 2) Yoksa backend'den getir
+      this.subscriptions.push(
+        this.userService.getUserInfo().subscribe({
+          next: (u) => {
+            if (u) {
+              this.currentUserId = u.id;
+              this.initAfterUser();
+            }
+          },
+          error: () => {}
+        })
+      );
     }
 
-    this.route.paramMap.subscribe((params: ParamMap) => {
-      const friendId = params.get('id');
-      if (friendId) {
-        const friend = this.friends.find(f => f.id === friendId);
-        if (friend) {
-          this.selectedFriend = friend;
-        }
+    // 3) currentUser sinyali sonradan set edilirse tekrar initialize et
+    effect(() => {
+      const u = this.userService.currentUser();
+      if (u && u.id && u.id !== this.currentUserId) {
+        this.currentUserId = u.id;
+        this.initAfterUser();
       }
     });
+  }
+
+  private initAfterUser(): void {
+    if (this.initialized || !this.currentUserId) return;
+    this.initialized = true;
+    this.loadFriendsWithMessages();
+    this.initializeListeners();
   }
 
   ngOnDestroy(): void {
@@ -71,6 +108,11 @@ export class Friends implements OnInit, OnDestroy {
             avatarUrl: friend.sender?.profilePhotoUrl || 'assets/default-avatar.png'
           }));
           this.filteredFriends = [...this.friends];
+          // Route'tan gelen id varsa arkadaşlar yüklendikten sonra seç
+          if (this.pendingFriendId) {
+            const f = this.friends.find(x => x.id === this.pendingFriendId);
+            if (f) this.selectedFriend = f;
+          }
           this.loadLatestMessages();
         },
         error: () => {}

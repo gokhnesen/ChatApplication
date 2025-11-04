@@ -31,12 +31,7 @@
             ],
             "styles": [
               "src/styles.scss"
-            ],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+            ]
           },
           "configurations": {
             "production": {
@@ -63,12 +58,12 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-            "options": {
-    "ssl": true,
-    "sslKey": "src/ssl/server.key",
-    "sslCert": "src/ssl/server.crt"
-  },
           "builder": "@angular/build:dev-server",
+          "options": {
+            "ssl": true,
+            "sslKey": "src/ssl/server.key",
+            "sslCert": "src/ssl/server.crt"
+          },
           "configurations": {
             "production": {
               "buildTarget": "ChatApplicationClient:build:production"

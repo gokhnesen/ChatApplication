@@ -1,40 +1,31 @@
 <div class="add-friends-wrapper">
   <div class="add-friends-section">
-    <div class="search-bar">
-      <i class="fas fa-search"></i>
+    <div class="search">
       <input 
         type="text"
         [(ngModel)]="searchText"
         (input)="onSearchChange()"
-        placeholder="İsim, kullanıcı adı veya arkadaş kodu ile ara..."
+        placeholder="Kullanıcı adı / e‑posta / arkadaş kodu"
         class="search-input">
-      <i *ngIf="isLoading" class="fas fa-spinner fa-spin"></i>
+      <button (click)="addFriendByCode()" [disabled]="!searchText?.trim()">Koda göre ekle</button>
     </div>
 
-    <div class="users-list">
-      <!-- Boş durum - Arama yapılmadı -->
-      <div *ngIf="searchText.trim().length === 0" class="empty-state">
-        <i class="fas fa-user-friends"></i>
-        <p>Arkadaş aramak için isim, email veya arkadaş kodu yazın</p>
-      </div>
-
-      <!-- Boş durum - Sonuç bulunamadı -->
-      <div *ngIf="searchText.trim().length > 0 && users.length === 0 && !isLoading" class="empty-state">
-        <i class="fas fa-search"></i>
-        <p>Kullanıcı bulunamadı</p>
-      </div>
-
-      <!-- Kullanıcı listesi -->
-      <div *ngFor="let user of users" class="user-item" (click)="selectUser(user)">
-        <img [src]="getUserAvatar(user)" alt="avatar" class="user-avatar">
-        <div class="user-info">
-          <h4>{{ user.name }} {{ user.lastName }}</h4>
-          <p>@{{ user.userName }}</p>
-          <span class="friend-code">Kod: {{ user.friendCode }}</span>
+    <div class="results" *ngIf="users?.length">
+      <div class="user-item" *ngFor="let u of users" (click)="selectUser(u)">
+        <img [src]="getUserAvatar(u)" width="36" height="36" />
+        <div class="info">
+          <div class="name">{{u.name}} {{u.lastName}}</div>
+          <div class="meta">@{{u.userName}} • {{u.email}}</div>
         </div>
-        <button class="add-btn" (click)="addFriend(user); $event.stopPropagation()">
-          <i class="fas fa-user-plus"></i>
-        </button>
+
+        <ng-container *ngIf="!isAlreadyFriend(u); else alreadyTpl">
+          <button (click)="addFriend(u); $event.stopPropagation()" [disabled]="isRequesting(u)">
+            {{ isRequesting(u) ? 'Gönderiliyor...' : 'Arkadaş Ekle' }}
+          </button>
+        </ng-container>
+        <ng-template #alreadyTpl>
+          <span class="already">Zaten arkadaşsınız</span>
+        </ng-template>
       </div>
     </div>
   </div>

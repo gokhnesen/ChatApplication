@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { UserService } from '../../services/user-service';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { FriendService, PendingFriendRequest } from '../../services/friend-service';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,29 +21,24 @@ export class Sidebar implements OnInit {
   currentRoute: string = '';
   currentChatId: string | null = null;
 
+  // Dropdown state
+  showRequests = false;
+  requestsLoading = false;
+  requestsError: string | null = null;
+  pendingRequests: PendingFriendRequest[] = [];
+  private processing = new Set<string>();
+  currentUserId = '';
+
   constructor(
     private userService: UserService,
     private router: Router,
-    private route: ActivatedRoute
-  ) {
-    this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: any) => {
-      this.currentRoute = event.url;
-      
-      // Chat ID'yi yakala
-      const urlSegments = event.url.split('/');
-      if (urlSegments.length >= 3) {
-        const lastSegment = urlSegments[urlSegments.length - 1];
-        if (lastSegment && lastSegment !== 'chat' && lastSegment !== 'add-friends') {
-          this.currentChatId = lastSegment;
-        }
-      }
-    });
-  }
+    private route: ActivatedRoute,
+    private friendService: FriendService
+  ) {}
 
   ngOnInit(): void {
     this.currentRoute = this.router.url;
+    this.refreshRequests();
   }
 
   navigateToChat(): void {
@@ -72,5 +68,45 @@ export class Sidebar implements OnInit {
 
   isActiveRoute(route: string): boolean {
     return this.currentRoute.includes(route);
+  }
+
+  toggleRequests(): void {
+    this.showRequests = !this.showRequests;
+    if (this.showRequests) this.refreshRequests();
+  }
+
+  refreshRequests(): void {
+    this.requestsLoading = true;
+    this.requestsError = null;
+    this.friendService.getPendingRequests().subscribe({
+      next: (list) => { this.pendingRequests = list || []; this.requestsLoading = false; },
+      error: (err) => { this.requestsError = err?.error?.message || 'İstekler alınamadı.'; this.requestsLoading = false; }
+    });
+  }
+
+  isProcessing(id: string): boolean {
+    return this.processing.has(id);
+  }
+
+  respond(req: any, accept: boolean): void {
+    const fid = req.friendshipId;
+    if (this.processing.has(fid)) return;
+    this.processing.add(fid);
+
+    // receiverId’yi servis tarafı otomatik tamamlayacak helper’ı kullan
+    this.friendService.respondToFriendRequestById(fid, accept).subscribe({
+      next: () => {
+        this.processing.delete(fid);
+        this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== fid);
+      },
+      error: () => { this.processing.delete(fid); }
+    });
+  }
+
+  trackByRequest = (_: number, r: PendingFriendRequest) => r.friendshipId;
+
+  onAvatarError(evt: Event) {
+    const img = evt.target as HTMLImageElement;
+    img.src = 'assets/default-avatar.png';
   }
 }

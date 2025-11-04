@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
-import { Subject, Subscription } from 'rxjs';
+import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 interface SearchUser {
@@ -30,6 +30,11 @@ export class AddFriends implements OnInit, OnDestroy {
   isLoading: boolean = false;
   private searchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
+  private lastSearchTerm = '';
+  // Arkadaş kontrolü ve buton durumu için
+  myFriendIds = new Set<string>();
+  private requestedIds = new Set<string>();
+  private loadingIds = new Set<string>();
 
   constructor(
     private userService: UserService,
@@ -38,23 +43,37 @@ export class AddFriends implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Mevcut arkadaşları yükle (zaten arkadaş mı kontrolü için)
+    this.subscriptions.push(
+      this.friendService.getMyFriends().subscribe({
+        next: (friends: any[]) => {
+          this.myFriendIds = new Set((friends || []).map(f => f.id));
+        },
+        error: () => {}
+      })
+    );
+
     this.subscriptions.push(
       this.searchSubject.pipe(
         debounceTime(500),
         distinctUntilChanged(),
         switchMap(searchTerm => {
-          if (searchTerm.trim().length === 0) {
+          const term = searchTerm.trim();
+          this.lastSearchTerm = term;
+          if (term.length === 0) {
             this.users = [];
-            return [];
+            return of([]); // boş observable döndür
           }
           this.isLoading = true;
-          return this.userService.searchUsers(searchTerm);
+          return this.userService.searchUsers(term);
         })
       ).subscribe({
         next: (response) => {
           this.isLoading = false;
           if (response && response.isSuccess) {
-            this.users = response.data || [];
+            const term = this.normalize(this.lastSearchTerm);
+            const data: SearchUser[] = response.data || [];
+            this.users = data.filter(u => this.isExactMatch(u, term));
           } else {
             this.users = [];
           }
@@ -82,17 +101,65 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   addFriend(user: SearchUser): void {
-    this.friendService.sendFriendRequest(user.id).subscribe({
-      next: (response) => {
-        alert('Arkadaşlık isteği gönderildi!');
+    if (this.isAlreadyFriend(user)) { alert('Zaten arkadaşsınız.'); return; }
+    if (this.isRequesting(user)) return;
+
+    this.loadingIds.add(user.id);
+    this.friendService.sendFriendRequest({ receiverId: user.id }).subscribe({
+      next: (res) => {
+        this.loadingIds.delete(user.id);
+        if (res?.isSuccess) {
+          this.requestedIds.add(user.id);
+          alert('Arkadaşlık isteği gönderildi!');
+        } else {
+          alert(res?.message || 'Arkadaşlık isteği gönderilemedi.');
+        }
       },
-      error: (error) => {
-        alert('Arkadaşlık isteği gönderilemedi.');
+      error: (err) => {
+        this.loadingIds.delete(user.id);
+        const msg = err?.error?.message || 'Arkadaşlık isteği gönderilemedi.';
+        alert(msg);
       }
+    });
+  }
+
+  addFriendByCode(): void {
+    const code = this.searchText.trim();
+    if (!code) return;
+    this.friendService.sendFriendRequest({ friendCode: code }).subscribe({
+      next: () => alert('Arkadaşlık isteği gönderildi!'),
+      error: () => alert('Arkadaşlık isteği gönderilemedi.')
     });
   }
 
   getUserAvatar(user: SearchUser): string {
     return user.profilePhotoUrl || 'assets/default-avatar.png';
+  }
+
+  private isExactMatch(u: SearchUser, term: string): boolean {
+    const email = this.normalize(u.email);
+    const userName = this.normalize(u.userName);
+    const friendCode = this.normalize(u.friendCode);
+    const fullName = this.normalize(`${u.name} ${u.lastName}`);
+    const fullNameAlt = this.normalize(`${u.lastName} ${u.name}`);
+
+    return term === email
+        || term === userName
+        || term === friendCode
+        || term === fullName
+        || term === fullNameAlt;
+  }
+
+  private normalize(text: string): string {
+    return (text || '').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
+  }
+
+  isAlreadyFriend(user: SearchUser): boolean {
+    const me = this.userService.currentUser();
+    return (me && user.id === me.id) || this.myFriendIds.has(user.id);
+  }
+
+  isRequesting(user: SearchUser): boolean {
+    return this.loadingIds.has(user.id) || this.requestedIds.has(user.id);
   }
 }
