@@ -31,3 +31,12 @@ export interface LastMessage {
   senderId: string;
 }
 
+export interface PendingFriendRequest {
+  friendshipId: string;
+  senderId: string;
+  senderName: string;
+  senderLastName: string;
+  senderEmail: string;
+  requestDate: string;
+}
+

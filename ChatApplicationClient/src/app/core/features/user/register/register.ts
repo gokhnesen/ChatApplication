@@ -14,6 +14,7 @@ import { UserService } from '../../../services/user-service';
 export class Register {
   name: string = '';
   lastName: string = '';
+  userName: string = '';
   email: string = '';
   password: string = '';
   error: string = '';
@@ -74,6 +75,7 @@ export class Register {
         email: this.email, 
         password: this.password, 
         name: this.name, 
+        userName: this.userName,
         lastName: this.lastName,
         profilePhotoUrl: profilePhotoUrl
       }).subscribe({

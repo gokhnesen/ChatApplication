@@ -54,7 +54,15 @@ namespace ChatApplicationAPI.API.Controllers
                     return BadRequest(new { IsSuccess = false, Message = "Sadece .jpg, .jpeg, .png ve .gif dosyaları kabul edilmektedir." });
                 }
 
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "profiles");
+                // Fix: Handle null WebRootPath
+                var webRootPath = _environment.WebRootPath;
+                if (string.IsNullOrEmpty(webRootPath))
+                {
+                    // Fallback to ContentRootPath if WebRootPath is not set
+                    webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
+                }
+
+                var uploadsFolder = Path.Combine(webRootPath, "uploads", "profiles");
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);

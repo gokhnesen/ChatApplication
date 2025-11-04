@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import { User } from '../shared/models/user';
 
 @Injectable({
@@ -29,31 +29,33 @@ export class UserService {
     return this.httpClient.get<{ isAuthenticated: boolean }>(`${this.apiUrl}/auth-status`);
   }
 
-  login(values: any) {
-    return this.httpClient.post<User>(this.apiUrl + '/login', values, { withCredentials: true }).pipe(
-      tap(user => {
-        this.currentUser.set(user);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('currentUser', JSON.stringify(user));
-        }
+  login(payload: { email?: string; userName?: string; password: string }) {
+    // Cookie-based login endpoint
+    const url = `${this.apiUrl}/login?useCookies=true&useSessionCookies=true`;
+    return this.httpClient.post<any>(url, payload, { withCredentials: true }).pipe(
+      // Cookie is set by server. Then load the user.
+      switchMap(() => this.getUserInfo()),
+      tap(() => localStorage.setItem('isAuthenticated', 'true')),
+      catchError(err => {
+        localStorage.removeItem('isAuthenticated');
+        throw err;
       })
     );
   }
 
   getUserInfo() {
-    return this.httpClient.get<User>(this.apiUrl + '/user/user-info', { withCredentials: true }).pipe(
-      map(user => {
-        this.currentUser.set(user);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('currentUser', JSON.stringify(user));
-        }
-        return user;
-      }),
-      catchError(error => {
-        console.error('Error fetching user info:', error);
-        return of(null);
-      })
-    );
+    return this.httpClient.get<User>('https://localhost:7055/api/User/user-info', { withCredentials: true })
+      .pipe(tap(u => {
+        this.currentUser.set(u);
+        localStorage.setItem('currentUser', JSON.stringify(u));
+      }));
+  }
+
+  // Optionally call this on app start to restore session from cookie
+  tryRestoreSession() {
+    return this.getUserInfo().pipe(
+      catchError(() => of(null))
+    ).subscribe();
   }
 
   logout() {
@@ -78,5 +80,10 @@ export class UserService {
 
   searchUsers(searchTerm: string): Observable<any> {
     return this.httpClient.get(`${this.apiUrl}/User/list?searchTerm=${searchTerm}`);
+  }
+
+  // Yardımcı: kullanıcı avatarının URL’i (backend yolunu kendi API’ne göre gerekirse değiştir)
+  getProfilePhotoUrlByUserId(userId: string): string {
+    return `${this.apiUrl}/user/profile-photo/${userId}`;
   }
 }

@@ -9,6 +9,7 @@ namespace ChatApplication.Application.Features.Friend.Queries.GetPendingRequests
         public string SenderName { get; set; } = string.Empty;
         public string SenderLastName { get; set; } = string.Empty;
         public string SenderEmail { get; set; } = string.Empty;
+        public string SenderProfilePhotoUrl { get; set; }
         public DateTime RequestDate { get; set; }
     }
 }

@@ -10,6 +10,7 @@
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   position: relative; // Pozisyon değerini ekle
+  overflow: visible; /* dropdown taşabilsin */
 }
 
 // Hover genişlemesini kaldıralım
@@ -74,3 +75,74 @@
   color: white;
   background: rgba(255, 255, 255, 0.1);
 }
+
+.avatar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+}
+
+.fr-anchor {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px; /* avatarın hemen sağında dursun */
+}
+
+.fr-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.fr-btn .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Dropdown sağ tarafa açılsın */
+.fr-dropdown {
+  position: absolute;
+  left: calc(100% + 8px);
+  right: auto;
+  top: 0;
+  width: 340px;
+  max-height: 420px;
+  overflow: auto;
+  background: wheat;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 1000;
+}
+
+.fr-item {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+}
+.fr-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+
+.fr-info .fr-name { font-weight: 600; }
+.fr-info .fr-meta { font-size: 12px; opacity: .75; }
+
+.fr-actions { display: flex; gap: 6px; align-items: center; }
+.fr-actions .accept  { background: #2ecc71; color: #0b2; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.fr-actions .decline { background: #e74c3c; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.fr-actions button[disabled] { opacity: .6; cursor: default; }

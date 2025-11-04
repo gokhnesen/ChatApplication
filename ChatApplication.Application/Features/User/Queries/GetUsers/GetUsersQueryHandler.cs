@@ -32,13 +32,11 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
 
                 var query = _userManager.Users.AsQueryable();
 
-                // Belirli kullan?c?y? hariç tut
                 if (!string.IsNullOrWhiteSpace(request.ExcludeUserId))
                 {
                     query = query.Where(u => u.Id != request.ExcludeUserId);
                 }
 
-                // Arama terimi ile filtreleme
                 if (!string.IsNullOrWhiteSpace(request.SearchTerm))
                 {
                     var searchTerm = request.SearchTerm.Trim();
@@ -56,7 +54,6 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
 
                 }
 
-                // Sayfalama sadece parametre verildi?inde uygulans?n
                 if (request.PageNumber.HasValue && request.PageSize.HasValue)
                 {
                     var pageNumber = Math.Max(1, request.PageNumber.Value);
