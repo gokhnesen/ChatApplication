@@ -13,7 +13,7 @@ export type Friend = {
     lastName: string;
     email: string;
     userName: string;
-    avatarUrl?: string;
+    profilePhotoUrl?: string;
     unreadMessageCount?: number;
 };
 

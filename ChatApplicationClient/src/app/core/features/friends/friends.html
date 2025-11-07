@@ -17,7 +17,7 @@
       [class.has-unread]="friend.unreadMessageCount && friend.unreadMessageCount > 0"
       (click)="selectFriend(friend)">
       
-      <img [src]="friend.avatarUrl || 'assets/default-avatar.png'" alt="avatar" class="friend-avatar">
+      <img [src]="friend.profilePhotoUrl || 'assets/default-avatar.png'" alt="avatar" class="friend-avatar">
       
       <div class="friend-info">
         <div class="friend-header">

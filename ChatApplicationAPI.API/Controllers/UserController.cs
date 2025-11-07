@@ -1,4 +1,5 @@
 ﻿using ChatApplication.Application.Features.User.Commands;
+using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.IO;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ChatApplicationAPI.API.Controllers
@@ -33,6 +35,37 @@ namespace ChatApplicationAPI.API.Controllers
             return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
+        [HttpPut("update-profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileCommand command)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new
+                    {
+                        IsSuccess = false,
+                        Message = "Kullanıcı girişi yapılmamış."
+                    });
+                }
+
+                command.UserId = userId;
+
+                var response = await Mediator.Send(command);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = "Sunucu hatası oluştu.",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+        }
+
         [HttpPost("upload-profile-photo")]
         public async Task<IActionResult> UploadProfilePhoto([FromForm] ProfilePhotoUploadModelDto model)
         {
@@ -53,12 +86,9 @@ namespace ChatApplicationAPI.API.Controllers
                 {
                     return BadRequest(new { IsSuccess = false, Message = "Sadece .jpg, .jpeg, .png ve .gif dosyaları kabul edilmektedir." });
                 }
-
-                // Fix: Handle null WebRootPath
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
                 {
-                    // Fallback to ContentRootPath if WebRootPath is not set
                     webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
                 }
 

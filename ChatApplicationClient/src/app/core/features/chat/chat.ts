@@ -17,10 +17,10 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./chat.scss']
 })
 export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
-  @Input() receiverUser: { id: string; name: string; lastName?: string; avatar?: string } = { 
+  @Input() receiverUser: { id: string; name: string; lastName?: string; profilePhotoUrl?: string } = { 
     id: '', 
     name: 'Sohbet', 
-    avatar: 'assets/default-avatar.png' 
+    profilePhotoUrl: 'assets/default-avatar.png' 
   };
   
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
@@ -184,7 +184,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.subscriptions.push(
       this.route.params.subscribe(params => {
         const friendId = params['id'];
-        console.log('Route params ID:', friendId);
         
         if (friendId && friendId !== this.receiverUser.id) {
           this.subscriptions.push(
@@ -195,9 +194,9 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
                   id: friend.id,
                   name: friend.name || '',
                   lastName: friend.lastName,
-                  avatar: friend.avatarUrl || 'assets/default-avatar.png'
+                  // Backend'den tam URL geliyor
+                  profilePhotoUrl: friend.profilePhotoUrl || 'assets/default-avatar.png'
                 };
-                console.log('Friend found and set as receiver:', this.receiverUser);
                 
                 this.messages = [];
                 this.loadMessages();

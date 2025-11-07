@@ -27,23 +27,22 @@ namespace ChatApplication.Application.Features.Friend.Queries.GetFriends
         {
             try
             {
-                _logger.LogInformation("Kullan?c?n?n arkada?lar? getiriliyor: {UserId}", request.UserId);
+                _logger.LogInformation("Kullanicinin arkadaslari getiriliyor: {UserId}", request.UserId);
 
                 var friendships = await _friendReadRepository.GetFriendsAsync(request.UserId);
                 var friends = new List<GetFriendsResponse>();
 
                 foreach (var friendship in friendships)
                 {
-                    // Arkada? olan kullan?c?y? belirle (gönderen ya da al?c?)
                     ApplicationUser? friend = null;
                     
                     if (friendship.SenderId == request.UserId)
                     {
-                        friend = friendship.Receiver; // Kullan?c? gönderen ise, arkada? al?c?d?r
+                        friend = friendship.Receiver; 
                     }
                     else
                     {
-                        friend = friendship.Sender; // Kullan?c? al?c? ise, arkada? gönderendir
+                        friend = friendship.Sender;
                     }
                     
                     if (friend != null)
@@ -54,7 +53,9 @@ namespace ChatApplication.Application.Features.Friend.Queries.GetFriends
                             Name = friend.Name,
                             LastName = friend.LastName,
                             Email = friend.Email,
-                            UserName = friend.UserName
+                            UserName = friend.UserName,
+                            ProfilePhotoUrl = friend.ProfilePhotoUrl
+
                         });
                     }
                 }

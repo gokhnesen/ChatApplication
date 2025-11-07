@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, switchMap, map } from 'rxjs';
 import { UserService } from './user-service';
 import { Friend } from '../shared/models/friend';
 
@@ -27,7 +27,15 @@ export class FriendService {
     }
 
     getMyFriends(): Observable<Friend[]> {
-        return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/my-friends`, { withCredentials: true });
+      return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/my-friends`, { withCredentials: true })
+        .pipe(
+          map((friends: Friend[]) => friends.map(f => ({
+            ...f,
+            profilePhotoUrl: f.profilePhotoUrl 
+              ? `https://localhost:7055${f.profilePhotoUrl}` 
+              : undefined
+          })))
+        );
     }
 
     getPendingRequests(): Observable<PendingFriendRequest[]> {

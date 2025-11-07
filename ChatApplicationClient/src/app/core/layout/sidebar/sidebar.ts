@@ -59,7 +59,7 @@ export class Sidebar implements OnInit {
   }
 
   navigateToProfile(): void {
-    this.router.navigate(['/profile']);
+    this.router.navigate(['/edit-profile']);
   }
 
   navigateToSettings(): void {
