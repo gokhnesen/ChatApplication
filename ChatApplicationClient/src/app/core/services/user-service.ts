@@ -75,15 +75,25 @@ export class UserService {
     const formData = new FormData();
     formData.append('photo', file);
 
-    return this.httpClient.post(`${this.apiUrl}/user/upload-profile-photo`, formData);
+    return this.httpClient.post(`${this.apiUrl}/user/upload-profile-photo`, formData, { withCredentials: true });
   }
 
   searchUsers(searchTerm: string): Observable<any> {
     return this.httpClient.get(`${this.apiUrl}/User/list?searchTerm=${searchTerm}`);
   }
 
-  // Yardımcı: kullanıcı avatarının URL’i (backend yolunu kendi API’ne göre gerekirse değiştir)
   getProfilePhotoUrlByUserId(userId: string): string {
     return `${this.apiUrl}/user/profile-photo/${userId}`;
+  }
+
+  updateProfile(data: { userId: string; name: string; lastName: string; profilePhotoUrl?: string }): Observable<any> {
+    return this.httpClient.put<any>(`${this.apiUrl}/User/update-profile`, data, { withCredentials: true })
+      .pipe(
+        tap(res => {
+          if (res?.isSuccess !== false) {
+            this.getUserInfo().subscribe();
+          }
+        })
+      );
   }
 }

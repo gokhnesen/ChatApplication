@@ -1,0 +1,38 @@
+<div class="edit-user-container">
+  <form (ngSubmit)="updateProfile()" class="edit-form">
+    <h2>Profil Düzenle</h2>
+
+    <div class="photo-section">
+      <div class="photo-preview">
+        <img [src]="photoPreviewUrl || currentPhotoPreview" alt="Profil" />
+      </div>
+      <label for="photo-upload" class="photo-upload-btn">Fotoğraf Değiştir</label>
+      <input 
+        id="photo-upload" 
+        type="file" 
+        accept="image/*" 
+        (change)="onPhotoSelected($event)"
+        hidden />
+    </div>
+
+    <div class="form-group">
+      <label>Ad</label>
+      <input [(ngModel)]="name" name="name" type="text" placeholder="Adınız" required />
+    </div>
+
+    <div class="form-group">
+      <label>Soyad</label>
+      <input [(ngModel)]="lastName" name="lastName" type="text" placeholder="Soyadınız" required />
+    </div>
+
+    <div *ngIf="error" class="message error">{{ error }}</div>
+    <div *ngIf="success" class="message success">{{ success }}</div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Güncelleniyor...' : 'Kaydet' }}
+      </button>
+      <button type="button" (click)="cancel()" [disabled]="loading">İptal</button>
+    </div>
+  </form>
+</div>

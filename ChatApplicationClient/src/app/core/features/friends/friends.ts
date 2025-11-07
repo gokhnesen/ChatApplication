@@ -105,10 +105,10 @@ export class Friends implements OnInit, OnDestroy {
         next: (data: Friend[]) => {
           this.friends = data.map(friend => ({
             ...friend,
-            avatarUrl: friend.sender?.profilePhotoUrl || 'assets/default-avatar.png'
+            // Backend'den tam URL geliyorsa kullan, yoksa varsayılan
+            avatarUrl: friend.profilePhotoUrl || 'assets/default-avatar.png'
           }));
           this.filteredFriends = [...this.friends];
-          // Route'tan gelen id varsa arkadaşlar yüklendikten sonra seç
           if (this.pendingFriendId) {
             const f = this.friends.find(x => x.id === this.pendingFriendId);
             if (f) this.selectedFriend = f;
