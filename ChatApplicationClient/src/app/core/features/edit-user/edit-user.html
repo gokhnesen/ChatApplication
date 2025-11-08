@@ -4,7 +4,7 @@
 
     <div class="photo-section">
       <div class="photo-preview">
-        <img [src]="photoPreviewUrl || currentPhotoPreview" alt="Profil" />
+        <img [src]="photoPreviewUrl || (profilePhotoUrl | profilePhoto)" alt="Profil" />
       </div>
       <label for="photo-upload" class="photo-upload-btn">Fotoğraf Değiştir</label>
       <input 

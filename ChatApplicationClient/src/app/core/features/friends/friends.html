@@ -1,4 +1,15 @@
 <div class="friends-container">
+
+  <!-- KULLANICI BAŞLIĞI -->
+  <div class="me-header">
+    <img class="me-avatar"
+         [src]="currentUser?.profilePhotoUrl | profilePhoto">
+    <div class="me-meta">
+      <div class="me-name">{{ currentUser?.name }} {{ currentUser?.lastName }}</div>
+      <div class="me-username" *ngIf="currentUser?.userName">@{{ currentUser?.userName }}</div>
+    </div>
+  </div>
+
   <div class="search-bar">
     <i class="fas fa-search search-icon"></i>
     <input 
@@ -17,7 +28,7 @@
       [class.has-unread]="friend.unreadMessageCount && friend.unreadMessageCount > 0"
       (click)="selectFriend(friend)">
       
-      <img [src]="friend.profilePhotoUrl || 'assets/default-avatar.png'" alt="avatar" class="friend-avatar">
+      <img [src]="friend.profilePhotoUrl | profilePhoto" alt="avatar" class="friend-avatar">
       
       <div class="friend-info">
         <div class="friend-header">

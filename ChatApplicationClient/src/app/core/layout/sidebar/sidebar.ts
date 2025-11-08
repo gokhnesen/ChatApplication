@@ -21,7 +21,6 @@ export class Sidebar implements OnInit {
   currentRoute: string = '';
   currentChatId: string | null = null;
 
-  // Dropdown state
   showRequests = false;
   requestsLoading = false;
   requestsError: string | null = null;
@@ -38,6 +37,17 @@ export class Sidebar implements OnInit {
 
   ngOnInit(): void {
     this.currentRoute = this.router.url;
+
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => {
+        const url = e.urlAfterRedirects || e.url;
+        this.currentRoute = url;
+        const chatMatch = url.match(/\/chat\/([^\/]+)/);
+        const addFriendsMatch = url.match(/\/add-friends\/([^\/]+)/);
+        this.currentChatId = chatMatch?.[1] || addFriendsMatch?.[1] || this.currentChatId;
+      });
+
     this.refreshRequests();
   }
 
@@ -50,7 +60,6 @@ export class Sidebar implements OnInit {
   }
 
   navigateToAddFriends(): void {
-    // Chat ID'yi koru
     if (this.currentChatId) {
       this.router.navigate(['/add-friends', this.currentChatId]);
     } else {

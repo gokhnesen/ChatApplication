@@ -1,32 +1,126 @@
 <div class="add-friends-wrapper">
   <div class="add-friends-section">
-    <div class="search">
-      <input 
-        type="text"
-        [(ngModel)]="searchText"
-        (input)="onSearchChange()"
-        placeholder="Kullanıcı adı / e‑posta / arkadaş kodu"
-        class="search-input">
-      <button (click)="addFriendByCode()" [disabled]="!searchText?.trim()">Koda göre ekle</button>
+    <!-- Search Header -->
+    <div class="search-header">
+      <h2>Arkadaş Ekle</h2>
+      <p class="subtitle">Kullanıcı adı, e-posta veya arkadaş kodu ile ara</p>
     </div>
 
-    <div class="results" *ngIf="users?.length">
-      <div class="user-item" *ngFor="let u of users" (click)="selectUser(u)">
-        <img [src]="getUserAvatar(u)" width="36" height="36" />
-        <div class="info">
-          <div class="name">{{u.name}} {{u.lastName}}</div>
-          <div class="meta">@{{u.userName}} • {{u.email}}</div>
-        </div>
-
-        <ng-container *ngIf="!isAlreadyFriend(u); else alreadyTpl">
-          <button (click)="addFriend(u); $event.stopPropagation()" [disabled]="isRequesting(u)">
-            {{ isRequesting(u) ? 'Gönderiliyor...' : 'Arkadaş Ekle' }}
-          </button>
-        </ng-container>
-        <ng-template #alreadyTpl>
-          <span class="already">Zaten arkadaşsınız</span>
-        </ng-template>
+    <!-- Search Input -->
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input 
+          type="text"
+          [(ngModel)]="searchText"
+          (input)="onSearchChange()"
+          placeholder="Ara..."
+          class="search-input">
+        <button 
+          *ngIf="searchText?.trim()" 
+          (click)="searchText = ''; onSearchChange()" 
+          class="clear-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
+      <button 
+        (click)="addFriendByCode()" 
+        [disabled]="!searchText?.trim()"
+        class="code-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+        Koda Göre Ekle
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>Aranıyor...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && searchText && !users?.length">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <h3>Sonuç bulunamadı</h3>
+      <p>Farklı bir arama terimi deneyin</p>
+    </div>
+
+    <!-- Results -->
+    <div class="results-container" *ngIf="!isLoading && users?.length">
+      <div class="results-header">
+        <span class="results-count">{{users.length}} sonuç bulundu</span>
+      </div>
+      <div class="results">
+        <div class="user-item" *ngFor="let u of users" (click)="selectUser(u)">
+          <div class="user-avatar">
+            <img [src]="getUserAvatar(u)" alt="{{u.name}}" />
+            <div class="online-indicator"></div>
+          </div>
+          
+          <div class="user-info">
+            <div class="user-name">{{u.name}} {{u.lastName}}</div>
+            <div class="user-meta">
+              <span class="username">@{{u.userName}}</span>
+              <span class="separator">•</span>
+              <span class="email">{{u.email}}</span>
+            </div>
+          </div>
+
+          <div class="user-actions" (click)="$event.stopPropagation()">
+            <ng-container *ngIf="!isAlreadyFriend(u); else alreadyTpl">
+              <button 
+                (click)="addFriend(u)" 
+                [disabled]="isRequesting(u)"
+                class="add-friend-btn"
+                [class.loading]="isRequesting(u)">
+                <svg *ngIf="!isRequesting(u)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <line x1="19" y1="8" x2="19" y2="14"></line>
+                  <line x1="22" y1="11" x2="16" y2="11"></line>
+                </svg>
+                <span class="spinner-small" *ngIf="isRequesting(u)"></span>
+                {{ isRequesting(u) ? 'Gönderiliyor...' : 'Ekle' }}
+              </button>
+            </ng-container>
+            <ng-template #alreadyTpl>
+              <span class="already-friend">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Arkadaş
+              </span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Initial State -->
+    <div class="initial-state" *ngIf="!isLoading && !searchText">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      <h3>Arkadaş aramaya başlayın</h3>
+      <p>Kullanıcı adı, e-posta veya arkadaş kodu girin</p>
     </div>
   </div>
 

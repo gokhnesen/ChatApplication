@@ -2,14 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap, switchMap } from 'rxjs/operators';
+import { catchError, tap, switchMap } from 'rxjs/operators';
 import { User } from '../shared/models/user';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'https://localhost:7055/api';
+  private apiUrl = environment.apiUrl;
   currentUser = signal<any>(null);
 
   constructor(
@@ -30,10 +31,8 @@ export class UserService {
   }
 
   login(payload: { email?: string; userName?: string; password: string }) {
-    // Cookie-based login endpoint
     const url = `${this.apiUrl}/login?useCookies=true&useSessionCookies=true`;
     return this.httpClient.post<any>(url, payload, { withCredentials: true }).pipe(
-      // Cookie is set by server. Then load the user.
       switchMap(() => this.getUserInfo()),
       tap(() => localStorage.setItem('isAuthenticated', 'true')),
       catchError(err => {
@@ -44,14 +43,13 @@ export class UserService {
   }
 
   getUserInfo() {
-    return this.httpClient.get<User>('https://localhost:7055/api/User/user-info', { withCredentials: true })
+    return this.httpClient.get<User>(`${this.apiUrl}/User/user-info`, { withCredentials: true })
       .pipe(tap(u => {
         this.currentUser.set(u);
         localStorage.setItem('currentUser', JSON.stringify(u));
       }));
   }
 
-  // Optionally call this on app start to restore session from cookie
   tryRestoreSession() {
     return this.getUserInfo().pipe(
       catchError(() => of(null))
@@ -62,6 +60,8 @@ export class UserService {
     this.currentUser.set(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('lastSelectedFriendId'); // Son seçilen arkadaşı temizle
     }
     return this.httpClient.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).pipe(
       catchError(error => {
@@ -74,16 +74,11 @@ export class UserService {
   uploadProfilePhoto(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('photo', file);
-
     return this.httpClient.post(`${this.apiUrl}/user/upload-profile-photo`, formData, { withCredentials: true });
   }
 
   searchUsers(searchTerm: string): Observable<any> {
     return this.httpClient.get(`${this.apiUrl}/User/list?searchTerm=${searchTerm}`);
-  }
-
-  getProfilePhotoUrlByUserId(userId: string): string {
-    return `${this.apiUrl}/user/profile-photo/${userId}`;
   }
 
   updateProfile(data: { userId: string; name: string; lastName: string; profilePhotoUrl?: string }): Observable<any> {

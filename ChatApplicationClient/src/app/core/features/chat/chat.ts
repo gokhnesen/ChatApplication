@@ -8,11 +8,12 @@ import { FriendService } from '../../services/friend-service';
 import { UserService } from '../../services/user-service';
 import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { Subscription } from 'rxjs';
+import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, CommonModule],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, ProfilePhotoPipe],
   templateUrl: './chat.html',
   styleUrls: ['./chat.scss']
 })

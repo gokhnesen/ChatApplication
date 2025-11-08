@@ -1,7 +1,8 @@
 <div class="chat-container">
   <!-- Chat header with recipient info -->
   <div class="chat-header" *ngIf="receiverUser">
-    <img [src]="receiverUser?.profilePhotoUrl || 'https://via.placeholder.com/40'" alt="avatar" class="header-avatar" />
+    <!-- Receiver avatar -->
+    <img [src]="receiverUser.profilePhotoUrl | profilePhoto" alt="Receiver avatar" class="header-avatar" />
     <div class="header-info">
       <h3>{{ receiverUser?.name }} {{ receiverUser?.lastName }}</h3>
       <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }} okunmamış</span>

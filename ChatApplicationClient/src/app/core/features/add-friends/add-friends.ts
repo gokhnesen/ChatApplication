@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
 import { Subject, Subscription, of } from 'rxjs';
@@ -39,7 +39,8 @@ export class AddFriends implements OnInit, OnDestroy {
   constructor(
     private userService: UserService,
     private friendService: FriendService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -95,9 +96,9 @@ export class AddFriends implements OnInit, OnDestroy {
     this.searchSubject.next(this.searchText);
   }
 
-  selectUser(user: SearchUser): void {
-    // Kullanıcıyı seç ve chat ekranını göster
-    this.router.navigate(['/add-friends', user.id]);
+  selectUser(u: any) {
+    // Soldaki listeden bir kullanıcıya tıklanınca sağdaki router-outlet'e Chat’i yükle
+    this.router.navigate([u.id], { relativeTo: this.route });
   }
 
   addFriend(user: SearchUser): void {
