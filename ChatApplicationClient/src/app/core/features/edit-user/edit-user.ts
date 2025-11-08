@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../../services/user-service';
+import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
 @Component({
   selector: 'app-edit-user',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProfilePhotoPipe],
   templateUrl: './edit-user.html',
   styleUrls: ['./edit-user.scss']
 })
@@ -16,7 +17,6 @@ export class EditUser implements OnInit {
   name = '';
   lastName = '';
   profilePhotoUrl = '';
-  currentPhotoPreview = '';
   
   selectedPhoto: File | null = null;
   photoPreviewUrl: string | null = null;
@@ -51,9 +51,6 @@ export class EditUser implements OnInit {
     this.name = user.name || '';
     this.lastName = user.lastName || '';
     this.profilePhotoUrl = user.profilePhotoUrl || '';
-    this.currentPhotoPreview = user.profilePhotoUrl 
-      ? `https://localhost:7055${user.profilePhotoUrl}`
-      : 'assets/default-avatar.png';
   }
 
   onPhotoSelected(event: Event): void {
@@ -82,15 +79,13 @@ export class EditUser implements OnInit {
     try {
       let uploadedPhotoUrl = this.profilePhotoUrl;
       
-      // Yeni fotoğraf seçildiyse yükle ve dönen URL'i kullan
       if (this.selectedPhoto) {
         const uploadRes = await this.userService.uploadProfilePhoto(this.selectedPhoto).toPromise();
         if (uploadRes?.isSuccess && uploadRes?.profilePhotoUrl) {
-          uploadedPhotoUrl = uploadRes.profilePhotoUrl; // Backend'den dönen yeni URL
+          uploadedPhotoUrl = uploadRes.profilePhotoUrl;
         }
       }
 
-      // Profil güncelle - yeni fotoğraf URL'i ile
       const payload = {
         userId: this.userId,
         name: this.name.trim(),
@@ -102,10 +97,6 @@ export class EditUser implements OnInit {
         next: () => {
           this.loading = false;
           this.success = 'Profil başarıyla güncellendi!';
-          // Önizlemeyi güncelle
-          this.currentPhotoPreview = uploadedPhotoUrl 
-            ? `https://localhost:7055${uploadedPhotoUrl}`
-            : 'assets/default-avatar.png';
           this.photoPreviewUrl = null;
           this.selectedPhoto = null;
           setTimeout(() => this.router.navigate(['/chat']), 1500);

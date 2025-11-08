@@ -34,11 +34,13 @@ export const routes: Routes = [
         children: [
             {
                 path: '',
-                component: AddFriends
-            },
-            {
-                path: ':id',
-                component: Chat
+                component: AddFriends,
+                children: [
+                    {
+                        path: ':id',
+                        component: Chat
+                    }
+                ]
             }
         ]
     },

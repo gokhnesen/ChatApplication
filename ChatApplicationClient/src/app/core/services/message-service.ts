@@ -11,12 +11,12 @@ export class MessageService {
   private httpClient = inject(HttpClient);
   private messageUpdateSubject = new Subject<MessageUpdate>();
 
+  messageUpdate$ = this.messageUpdateSubject.asObservable();
 
-
-    messageUpdate$ = this.messageUpdateSubject.asObservable();
   notifyNewMessage(update: MessageUpdate): void {
     this.messageUpdateSubject.next(update);
   }
+
   sendMessage(command: any): Observable<any> {
     return this.httpClient.post<any>(`${this.apiUrl}/message`, command);
   }
@@ -25,7 +25,6 @@ export class MessageService {
     return this.httpClient.get<Message[]>(`${this.apiUrl}/message/${userId1}/${userId2}`);
   }
 
-  // Backend'e userId ve senderId gönder
   markAsRead(userId: string, senderId: string): Observable<any> {
     return this.httpClient.put(`${this.apiUrl}/message/mark-as-read`, { 
       userId, 

@@ -9,21 +9,23 @@ import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { Friend } from '../../shared/models/friend';
 import { Message } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
+import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, ProfilePhotoPipe],
   templateUrl: './friends.html',
   styleUrls: ['./friends.scss']
 })
-export class Friends implements OnInit, OnDestroy {
+export class Friends implements OnInit {
   friends: Friend[] = [];
   filteredFriends: Friend[] = [];
   selectedFriend: Friend | null = null;
   searchText: string = '';
   currentUserId: string = '';
   friendMessages: Map<string, Message | null> = new Map();
+  currentUser: any = null;
   
   private messageService = inject(MessageService);
   private userService = inject(UserService);
@@ -33,7 +35,6 @@ export class Friends implements OnInit, OnDestroy {
   private ngZone = inject(NgZone);
   private subscriptions: Subscription[] = [];
 
-  // Init tekrar etmesin diye
   private initialized = false;
   private pendingFriendId: string | null = null;
 
@@ -41,10 +42,19 @@ export class Friends implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private friendService: FriendService
-  ) {}
+  ) {
+    // Signal'ı effect ile dinle
+    effect(() => {
+      const user = this.userService.currentUser();
+      if (user) {
+        this.currentUser = user;
+        this.currentUserId = user.id;
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   ngOnInit(): void {
-    // Route paramını her zaman al, arkadaşlar gelince seçebilmek için sakla
     this.subscriptions.push(
       this.route.paramMap.subscribe((params: ParamMap) => {
         this.pendingFriendId = params.get('id');
@@ -58,17 +68,19 @@ export class Friends implements OnInit, OnDestroy {
       })
     );
 
-    // 1) Sinyalde kullanıcı varsa hemen başlat
+    // Signal'dan kullanıcıyı al
     const user = this.userService.currentUser();
     if (user) {
+      this.currentUser = user;
       this.currentUserId = user.id;
       this.initAfterUser();
     } else {
-      // 2) Yoksa backend'den getir
+      // Backend'den getir
       this.subscriptions.push(
         this.userService.getUserInfo().subscribe({
           next: (u) => {
             if (u) {
+              this.currentUser = u;
               this.currentUserId = u.id;
               this.initAfterUser();
             }
@@ -77,15 +89,6 @@ export class Friends implements OnInit, OnDestroy {
         })
       );
     }
-
-    // 3) currentUser sinyali sonradan set edilirse tekrar initialize et
-    effect(() => {
-      const u = this.userService.currentUser();
-      if (u && u.id && u.id !== this.currentUserId) {
-        this.currentUserId = u.id;
-        this.initAfterUser();
-      }
-    });
   }
 
   private initAfterUser(): void {
@@ -99,25 +102,67 @@ export class Friends implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
+  selectFriend(friend: Friend): void {
+    this.selectedFriend = friend;
+    friend.unreadMessageCount = 0;
+    
+    // Son seçilen arkadaşı localStorage'a kaydet
+    localStorage.setItem('lastSelectedFriendId', friend.id);
+    
+    this.cdr.detectChanges();
+    this.router.navigate(['/chat', friend.id]);
+  }
+
   private loadFriendsWithMessages(): void {
     this.subscriptions.push(
       this.friendService.getMyFriends().subscribe({
         next: (data: Friend[]) => {
-          this.friends = data.map(friend => ({
-            ...friend,
-            // Backend'den tam URL geliyorsa kullan, yoksa varsayılan
-            avatarUrl: friend.profilePhotoUrl || 'assets/default-avatar.png'
-          }));
+          this.friends = data;
           this.filteredFriends = [...this.friends];
+          
+          // Pending friend ID varsa onu seç
           if (this.pendingFriendId) {
             const f = this.friends.find(x => x.id === this.pendingFriendId);
-            if (f) this.selectedFriend = f;
+            if (f) {
+              this.selectedFriend = f;
+            }
+          } 
+          // Route'da ID yoksa ve chat sayfasındaysak son seçileni yükle
+          else if (this.router.url === '/chat' || this.router.url === '/') {
+            this.loadLastSelectedFriend();
           }
+          
           this.loadLatestMessages();
         },
         error: () => {}
       })
     );
+  }
+
+  private loadLastSelectedFriend(): void {
+    const lastFriendId = localStorage.getItem('lastSelectedFriendId');
+    if (lastFriendId && this.friends.length > 0) {
+      const lastFriend = this.friends.find(f => f.id === lastFriendId);
+      if (lastFriend) {
+        this.selectedFriend = lastFriend;
+        // Route'a yönlendir
+        this.router.navigate(['/chat', lastFriend.id]);
+      } else {
+        // Son arkadaş listede yoksa ilk arkadaşı seç
+        this.selectFirstFriend();
+      }
+    } else if (this.friends.length > 0) {
+      // Hiç seçim yoksa ilk arkadaşı seç
+      this.selectFirstFriend();
+    }
+  }
+
+  private selectFirstFriend(): void {
+    if (this.friends.length > 0) {
+      const firstFriend = this.friends[0];
+      this.selectedFriend = firstFriend;
+      this.router.navigate(['/chat', firstFriend.id]);
+    }
   }
 
   private loadLatestMessages(): void {
@@ -244,13 +289,6 @@ export class Friends implements OnInit, OnDestroy {
   private updateView(): void {
     this.filteredFriends = [...this.friends];
     this.cdr.detectChanges();
-  }
-
-  selectFriend(friend: Friend): void {
-    this.selectedFriend = friend;
-    friend.unreadMessageCount = 0;
-    this.cdr.detectChanges();
-    this.router.navigate(['/chat', friend.id]);
   }
 
   filterFriends(): void {
