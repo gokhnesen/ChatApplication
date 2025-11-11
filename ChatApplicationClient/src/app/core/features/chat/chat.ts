@@ -3,7 +3,7 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject, 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MessageService } from '../../services/message-service';
-import { Message } from '../../shared/models/message';
+import { Message, MessageType } from '../../shared/models/message';
 import { FriendService } from '../../services/friend-service';
 import { UserService } from '../../services/user-service';
 import { ChatSignalrService } from '../../services/chat-signalr-service';
@@ -20,7 +20,7 @@ import { PickerComponent } from '@ctrl/ngx-emoji-mart';
     CommonModule,
     ProfilePhotoPipe,
     PickerComponent
-],
+  ],
   templateUrl: './chat.html',
   styleUrls: ['./chat.scss']
 })
@@ -36,6 +36,13 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   messages: Message[] = [];
   messageText: string = '';
   
+  // Yeni özellikler
+  selectedFile: File | null = null;
+  selectedFilePreview: string | null = null;
+  isUploading: boolean = false;
+  imagePreviewUrl: string | null = null;
+  MessageType = MessageType;
+  
   currentUser = { 
     id: '', 
     name: '', 
@@ -48,11 +55,29 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private subscriptions: Subscription[] = [];
   
   unreadCount: number = 0;
-
-  private hasMarkedAsRead = false; // Yeni flag ekle
-
+  private hasMarkedAsRead = false;
   showEmojiPicker = false;
 
+  // Kamera özellikleri
+  showCamera: boolean = false;
+  cameraStream: MediaStream | null = null;
+  capturedImage: string | null = null;
+  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
+  @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
+  
+  // Video kayıt özellikleri
+  showVideoRecorder: boolean = false;
+  isRecording: boolean = false;
+  mediaRecorder: MediaRecorder | null = null;
+  recordedChunks: Blob[] = [];
+  recordedVideoUrl: string | null = null;
+  recordingDuration: number = 0;
+  recordingTimer: any = null;
+  maxRecordingDuration: number = 60; // 60 saniye max
+  videoStream: MediaStream | null = null;
+  @ViewChild('videoPreviewElement') videoPreviewElement!: ElementRef<HTMLVideoElement>;
+  @ViewChild('recordedVideoElement') recordedVideoElement!: ElementRef<HTMLVideoElement>;
+  
   // Emoji picker dışına tıklayınca kapat
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -106,8 +131,10 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   }
   
   ngOnDestroy(): void {
-    // Clean up all subscriptions when component is destroyed
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.stopCamera();
+    this.stopVideoRecording();
+    this.closeVideoRecorder();
   }
 
   ngAfterViewChecked() {
@@ -156,8 +183,15 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
     this.signalRService.startConnection(this.currentUser.id);
     
-    // Başkasından mesaj geldiğinde
-    this.signalRService.onReceiveMessage((senderId: string, content: string) => {
+    // ✅ GÜNCELLENECEK - 6 parametre al
+    this.signalRService.onReceiveMessage((
+      senderId: string, 
+      content: string,
+      type?: MessageType,
+      attachmentUrl?: string | null,
+      attachmentName?: string | null,
+      attachmentSize?: number | null
+    ) => {
       if (senderId === this.receiverUser.id) {
         const newMessage: Message = {
           id: Date.now().toString(),
@@ -165,22 +199,41 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           receiverId: this.currentUser.id,
           content: content,
           sentAt: new Date(),
-          isRead: false
+          isRead: false,
+          type: type || MessageType.Text,
+          attachmentUrl: attachmentUrl,
+          attachmentName: attachmentName,
+          attachmentSize: attachmentSize
         };
         
         this.messages.push(newMessage);
         setTimeout(() => this.scrollToBottom(), 0);
       }
       
-      // Friends component'e bildir (her durumda)
+      // Friends component'e bildir
       this.messageBroadcast.notifyNewMessage({
         friendId: senderId,
         content: content,
         senderId: senderId,
         receiverId: this.currentUser.id,
         sentAt: new Date(),
-        isOwn: false
+        isOwn: false,
+        type: type || MessageType.Text,
+        attachmentUrl: attachmentUrl,
+        attachmentName: attachmentName
       });
+    });
+
+    // ✅ GÜNCELLENECEK - 6 parametre al
+    this.signalRService.onMessageSent((
+      receiverId: string, 
+      content: string,
+      type?: MessageType,
+      attachmentUrl?: string | null,
+      attachmentName?: string | null,
+      attachmentSize?: number | null
+    ) => {
+      console.log('✅ Mesaj başarıyla iletildi:', { receiverId, content, type, attachmentUrl });
     });
 
     this.signalRService.onMessageRead((messageIds: string[]) => {
@@ -249,9 +302,10 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   private scrollToBottom(): void {
     try {
-      if (this.messagesContainer) {
-        this.messagesContainer.nativeElement.scrollTop = 
-          this.messagesContainer.nativeElement.scrollHeight;
+      if (this.messagesContainer?.nativeElement) {
+        const element = this.messagesContainer.nativeElement;
+        // Zorla scroll
+        element.scrollTop = element.scrollHeight;
       }
     } catch (err) {
       console.error('Error scrolling to bottom:', err);
@@ -282,43 +336,410 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     ).length;
   }
 
-  sendMessage() {
-    if (this.messageText.trim() && this.receiverUser.id && this.currentUser.id) {
-      const messageContent = this.messageText.trim();
+  // ============ VIDEO KAYIT FONKSİYONLARI ============
+
+  // Video kaydedici aç
+  async openVideoRecorder() {
+    try {
+      this.showVideoRecorder = true;
       
-      const newMessage = {
+      setTimeout(async () => {
+        this.videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: true // Ses de kaydet
+        });
+
+        if (this.videoPreviewElement && this.videoPreviewElement.nativeElement) {
+          this.videoPreviewElement.nativeElement.srcObject = this.videoStream;
+          this.videoPreviewElement.nativeElement.play();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Kamera/Mikrofon erişim hatası:', error);
+      alert('Kamera veya mikrofona erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.');
+      this.showVideoRecorder = false;
+    }
+  }
+
+  // Video kaydını başlat
+  startVideoRecording() {
+    if (!this.videoStream) return;
+
+    this.recordedChunks = [];
+    this.recordingDuration = 0;
+
+    const options = {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 2500000 // 2.5 Mbps
+    };
+
+    try {
+      this.mediaRecorder = new MediaRecorder(this.videoStream, options);
+    } catch (e) {
+      // Eğer vp9 desteklenmiyorsa, varsayılan codec'i kullan
+      this.mediaRecorder = new MediaRecorder(this.videoStream);
+    }
+
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        this.recordedChunks.push(event.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+      this.recordedVideoUrl = URL.createObjectURL(blob);
+      
+      // Blob'u File'a çevir
+      const file = new File([blob], `video-${Date.now()}.webm`, {
+        type: 'video/webm'
+      });
+      
+      this.selectedFile = file;
+      
+      // Önizleme videoyu göster
+      setTimeout(() => {
+        if (this.recordedVideoElement && this.recordedVideoElement.nativeElement) {
+          this.recordedVideoElement.nativeElement.src = this.recordedVideoUrl!;
+        }
+      }, 100);
+    };
+
+    this.mediaRecorder.start();
+    this.isRecording = true;
+
+    // Süre sayacı
+    this.recordingTimer = setInterval(() => {
+      this.recordingDuration++;
+      
+      // Max süre doldu mu?
+      if (this.recordingDuration >= this.maxRecordingDuration) {
+        this.stopVideoRecording();
+      }
+    }, 1000);
+  }
+
+  // Video kaydını durdur
+  stopVideoRecording() {
+    if (this.mediaRecorder && this.isRecording) {
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+    }
+
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+  }
+
+  // Video kaydı süresini formatla
+  formatRecordingTime(): string {
+    const minutes = Math.floor(this.recordingDuration / 60);
+    const seconds = this.recordingDuration % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Kalan süreyi formatla
+  getRemainingTime(): string {
+    const remaining = this.maxRecordingDuration - this.recordingDuration;
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Kaydı tekrar çek
+  retakeVideo() {
+    if (this.recordedVideoUrl) {
+      URL.revokeObjectURL(this.recordedVideoUrl);
+    }
+    this.recordedVideoUrl = null;
+    this.selectedFile = null;
+    this.recordedChunks = [];
+    this.recordingDuration = 0;
+  }
+
+  // Video kaydediciyi kapat
+  closeVideoRecorder() {
+    if (this.videoStream) {
+      this.videoStream.getTracks().forEach(track => track.stop());
+      this.videoStream = null;
+    }
+    
+    if (this.recordedVideoUrl) {
+      URL.revokeObjectURL(this.recordedVideoUrl);
+    }
+    
+    this.stopVideoRecording();
+    this.showVideoRecorder = false;
+    this.recordedVideoUrl = null;
+    this.recordingDuration = 0;
+  }
+
+  // Kaydedilen videoyu kullan
+  useRecordedVideo() {
+    if (this.selectedFile) {
+      this.selectedFilePreview = this.recordedVideoUrl;
+      this.closeVideoRecorder();
+    }
+  }
+
+  // Video dosya seçimi (galeri)
+  onVideoFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Video mu kontrol et
+    if (!file.type.startsWith('video/')) {
+      alert('Lütfen geçerli bir video dosyası seçin!');
+      return;
+    }
+
+    // 50MB kontrolü (videolar daha büyük olabilir)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Video boyutu 50MB\'dan büyük olamaz!');
+      return;
+    }
+
+    this.selectedFile = file;
+
+    // Video önizleme
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.selectedFilePreview = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Video süresini al
+  getVideoDuration(videoElement: HTMLVideoElement): number {
+    return Math.round(videoElement.duration);
+  }
+
+  // ============ DOSYA SEÇİMİ GÜNCELLEMESİ ============
+  
+  // Dosya seçimi
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Video ise
+    if (file.type.startsWith('video/')) {
+      this.onVideoFileSelected(event);
+      return;
+    }
+
+    // 10MB kontrolü
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Dosya boyutu 10MB\'dan büyük olamaz!');
+      return;
+    }
+
+    this.selectedFile = file;
+
+    // Resim ise önizleme göster
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.selectedFilePreview = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      this.selectedFilePreview = null;
+    }
+  }
+
+  // Dosya iptal
+  cancelFile() {
+    this.selectedFile = null;
+    this.selectedFilePreview = null;
+  }
+
+  // Mesaj gönder (dosya varsa dosyayla)
+ async sendMessage() {
+  // Dosya varsa sendMessageWithFile çağır
+  if (this.selectedFile) {
+    await this.sendMessageWithFile();
+    return; // ✅ ZORUNLU: Return ile fonksiyondan çık!
+  }
+
+  // Normal text mesaj gönder
+  await this.sendTextMessage();
+}
+
+  // Normal metin mesajı gönder
+  async sendTextMessage() {
+    if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
+
+    const command = {
+      senderId: this.currentUser.id,
+      receiverId: this.receiverUser.id,
+      content: this.messageText,
+      type: MessageType.Text
+    };
+
+    console.log('📤 Mesaj gönderiliyor:', command);
+
+    try {
+      const result = await this.messageService.sendMessage(command).toPromise();
+      
+      console.log('✅ API Response:', result);
+      
+      // API'den dönen response'u kontrol et
+      // Eğer response direkt mesaj objesi ise veya isSuccess yok ise
+      if (result) {
+        // Mesajı local state'e ekle
+        const newMessage: Message = {
+          id: result.messageId || result.id || Date.now().toString(),
+          senderId: this.currentUser.id,
+          receiverId: this.receiverUser.id,
+          content: command.content,
+          sentAt: result.sentAt ? new Date(result.sentAt) : new Date(),
+          isRead: false,
+          type: MessageType.Text
+        };
+        
+        this.messages.push(newMessage);
+        this.messageText = '';
+        
+        setTimeout(() => this.scrollToBottom(), 0);
+        
+        // SignalR ile karşı tarafa bildir
+        if (this.signalRService.isConnected()) {
+          this.signalRService.sendMessage(
+            this.receiverUser.id, 
+            command.content,
+            MessageType.Text // ✅ Text mesaj için type ekle
+          );
+        }
+        
+        // Friends component'e bildir
+        this.messageBroadcast.notifyNewMessage({
+          friendId: this.receiverUser.id,
+          content: command.content,
+          senderId: this.currentUser.id,
+          receiverId: this.receiverUser.id,
+          sentAt: new Date(),
+          isOwn: true,
+          type: MessageType.Text // ✅ Type ekle
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Mesaj gönderme hatası:', error);
+      alert(error.message || 'Mesaj gönderilemedi!');
+    }
+  }
+
+  // Dosya ile mesaj gönder
+  async sendMessageWithFile() {
+    if (!this.selectedFile || !this.receiverUser.id || !this.currentUser.id) return;
+
+    this.isUploading = true;
+    
+    try {
+      const uploadResult = await this.messageService.uploadFile(this.selectedFile).toPromise();
+      
+      console.log('📤 Upload result:', uploadResult);
+      
+      if (!uploadResult || !uploadResult.isSuccess) {
+        throw new Error(uploadResult?.message || 'Dosya yüklenemedi');
+      }
+
+      const messageCommand = {
         senderId: this.currentUser.id,
         receiverId: this.receiverUser.id,
-        content: messageContent
+        content: this.messageText || uploadResult.attachmentName,
+        type: uploadResult.type,
+        attachmentUrl: uploadResult.attachmentUrl,
+        attachmentName: uploadResult.attachmentName,
+        attachmentSize: uploadResult.attachmentSize
       };
+
+      console.log('📤 Sending message command:', messageCommand);
+
+      const sendResult = await this.messageService.sendMessage(messageCommand).toPromise();
       
-      this.messageService.sendMessage(newMessage).subscribe({
-        next: (response) => {
-          const localMessage: Message = {
-            id: response.id || Date.now().toString(),
-            senderId: this.currentUser.id,
-            receiverId: this.receiverUser.id,
-            content: messageContent,
-            sentAt: new Date(),
-            isRead: false
-          };
-          this.messages.push(localMessage);
-          this.messageText = '';
-          setTimeout(() => this.scrollToBottom(), 0);
-          
-          // Friends component'e bildir
-          this.messageBroadcast.notifyNewMessage({
-            friendId: this.receiverUser.id,
-            content: messageContent,
-            senderId: this.currentUser.id,
-            receiverId: this.receiverUser.id,
-            sentAt: new Date(),
-            isOwn: true
-          });
-        },
-        error: () => {}
-      });
+      console.log('✅ Send result:', sendResult);
+      
+      if (sendResult) {
+        const newMessage: Message = {
+          id: sendResult.messageId || sendResult.id || Date.now().toString(),
+          senderId: this.currentUser.id,
+          receiverId: this.receiverUser.id,
+          content: messageCommand.content,
+          sentAt: sendResult.sentAt ? new Date(sendResult.sentAt) : new Date(),
+          isRead: false,
+          type: messageCommand.type,
+          attachmentUrl: messageCommand.attachmentUrl,
+          attachmentName: messageCommand.attachmentName,
+          attachmentSize: messageCommand.attachmentSize
+        };
+        
+        this.messages.push(newMessage);
+        this.messageText = '';
+        this.selectedFile = null;
+        this.selectedFilePreview = null;
+        
+        setTimeout(() => this.scrollToBottom(), 100);
+        
+        // ✅ SignalR ile karşı tarafa TÜM BİLGİLERİ GÖNDER
+        if (this.signalRService.isConnected()) {
+          this.signalRService.sendMessage(
+            this.receiverUser.id, 
+            messageCommand.content,
+            messageCommand.type,
+            messageCommand.attachmentUrl,
+            messageCommand.attachmentName,
+            messageCommand.attachmentSize
+          );
+        }
+        
+        // Friends component'e bildir
+        this.messageBroadcast.notifyNewMessage({
+          friendId: this.receiverUser.id,
+          content: messageCommand.content,
+          senderId: this.currentUser.id,
+          receiverId: this.receiverUser.id,
+          sentAt: new Date(),
+          isOwn: true,
+          type: messageCommand.type,
+          attachmentUrl: messageCommand.attachmentUrl,
+          attachmentName: messageCommand.attachmentName
+        });
+        
+        console.log('✅ Mesaj başarıyla gönderildi ve UI güncellendi');
+      }
+    } catch (error: any) {
+      console.error('❌ Dosya gönderme hatası:', error);
+      alert(error.message || 'Dosya gönderilemedi!');
+    } finally {
+      this.isUploading = false;
     }
+  }
+
+  // Dosya boyutu formatla
+  formatFileSize(bytes: number | null | undefined): string {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Resim hata durumu
+  onImageError(event: any) {
+    event.target.src = 'assets/image-error.png';
+  }
+
+  // Resim önizleme aç
+ 
+
+  // Resim önizleme kapat
+  closeImagePreview() {
+    this.imagePreviewUrl = null;
   }
 
   toggleEmojiPicker() {
@@ -328,8 +749,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   addEmoji(event: any) {
     const emoji = event.emoji.native;
     this.messageText = (this.messageText || '') + emoji;
-    // Emoji seçtikten sonra açık bırak (isteğe göre)
-    // this.showEmojiPicker = false;
   }
 
   isOwnMessage(message: Message): boolean {
@@ -340,5 +759,95 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     return this.receiverUser.lastName
       ? `${this.receiverUser.name} ${this.receiverUser.lastName}`
       : this.receiverUser.name;
+  }
+
+  openImagePreview(url: string | null | undefined) {
+    if (url) {
+      window.open(url, '_blank');
+    }
+  }
+
+  // Kamerayı aç
+  async openCamera() {
+    try {
+      this.showCamera = true;
+      
+      // Biraz bekle ki ViewChild initialize olsun
+      setTimeout(async () => {
+        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user' // Ön kamera
+          },
+          audio: false
+        });
+
+        if (this.videoElement && this.videoElement.nativeElement) {
+          this.videoElement.nativeElement.srcObject = this.cameraStream;
+          this.videoElement.nativeElement.play();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Kamera erişim hatası:', error);
+      alert('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.');
+      this.showCamera = false;
+    }
+  }
+
+  // Fotoğraf çek
+  capturePhoto() {
+    if (!this.videoElement || !this.canvasElement) return;
+
+    const video = this.videoElement.nativeElement;
+    const canvas = this.canvasElement.nativeElement;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // Canvas boyutunu video boyutuna ayarla
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Video frame'ini canvas'a çiz
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Canvas'ı Blob'a çevir
+    canvas.toBlob((blob) => {
+      if (blob) {
+        // Blob'u File objesine çevir
+        const file = new File([blob], `camera-${Date.now()}.jpg`, {
+          type: 'image/jpeg'
+        });
+
+        // Canvas'tan base64 al (önizleme için)
+        this.capturedImage = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Dosya olarak kaydet
+        this.selectedFile = file;
+        this.selectedFilePreview = this.capturedImage;
+
+        // Kamerayı kapat
+        this.stopCamera();
+      }
+    }, 'image/jpeg', 0.9);
+  }
+
+  // Kamerayı kapat
+  stopCamera() {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => track.stop());
+      this.cameraStream = null;
+    }
+    this.showCamera = false;
+    this.capturedImage = null;
+  }
+
+  // Fotoğrafı tekrar çek
+  retakePhoto() {
+    this.capturedImage = null;
+    this.selectedFile = null;
+    this.selectedFilePreview = null;
+    this.openCamera();
   }
 }

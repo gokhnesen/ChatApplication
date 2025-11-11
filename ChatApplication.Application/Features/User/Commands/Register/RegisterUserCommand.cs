@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Http;
 
-namespace ChatApplication.Application.Features.User.Commands
+namespace ChatApplication.Application.Features.User.Commands.Register
 {
     public class RegisterUserCommand : IRequest<RegisterUserCommandResponse>
     {

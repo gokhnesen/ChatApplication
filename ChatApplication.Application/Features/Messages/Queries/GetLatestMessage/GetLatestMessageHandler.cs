@@ -1,4 +1,4 @@
-using ChatApplication.Application.Interfaces.Message;
+﻿using ChatApplication.Application.Interfaces.Message;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -40,12 +40,16 @@ namespace ChatApplication.Application.Features.Messages.Queries.GetLatestMessage
                     Content = latestMessage.Content,
                     SentAt = latestMessage.SentAt,
                     IsRead = latestMessage.IsRead,
-                    HasMessage = true
+                    HasMessage = true,
+                    Type = latestMessage.Type,
+                    AttachmentUrl = latestMessage.AttachmentUrl,
+                    AttachmentName = latestMessage.AttachmentName,
+                    AttachmentSize = latestMessage.AttachmentSize
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "En son mesaj getirilirken hata olu?tu");
+                _logger.LogError(ex, "En son mesaj getirilirken hata oluştu");
                 return new GetLatestMessageResponse { HasMessage = false };
             }
         }

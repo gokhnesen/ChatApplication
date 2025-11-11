@@ -1,20 +1,15 @@
-﻿using ChatApplication.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using ChatApplication.Domain.Entities;
 
-namespace ChatApplication.Application.Features.Messages.Queries.GetMessages
+namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
 {
-    public class GetMessagesQueryResponse
+    public class SendMessageCommandResponse
     {
-        public Guid Id { get; set; }
+        public Guid MessageId { get; set; }
         public string SenderId { get; set; }
         public string ReceiverId { get; set; }
         public string Content { get; set; }
         public DateTime SentAt { get; set; }
-        public bool IsRead { get; set; }
         
         public MessageType Type { get; set; }
         public string? AttachmentUrl { get; set; }
