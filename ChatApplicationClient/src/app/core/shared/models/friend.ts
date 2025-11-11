@@ -38,5 +38,7 @@ export interface PendingFriendRequest {
   senderLastName: string;
   senderEmail: string;
   requestDate: string;
+  senderProfilePhotoUrl: string | null;
+
 }
 

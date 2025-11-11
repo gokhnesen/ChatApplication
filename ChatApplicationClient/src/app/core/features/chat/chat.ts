@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject, effect, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, inject, effect, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MessageService } from '../../services/message-service';
@@ -9,11 +9,18 @@ import { UserService } from '../../services/user-service';
 import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { Subscription } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
+import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, CommonModule, ProfilePhotoPipe],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    CommonModule,
+    ProfilePhotoPipe,
+    PickerComponent
+],
   templateUrl: './chat.html',
   styleUrls: ['./chat.scss']
 })
@@ -43,6 +50,24 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   unreadCount: number = 0;
 
   private hasMarkedAsRead = false; // Yeni flag ekle
+
+  showEmojiPicker = false;
+
+  // Emoji picker dışına tıklayınca kapat
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const emojiPicker = document.querySelector('.emoji-picker-wrapper');
+    const emojiButton = document.querySelector('.emoji-btn');
+    
+    if (this.showEmojiPicker && 
+        emojiPicker && 
+        !emojiPicker.contains(target) && 
+        emojiButton && 
+        !emojiButton.contains(target)) {
+      this.showEmojiPicker = false;
+    }
+  }
 
   constructor(
     private messageService: MessageService,
@@ -195,7 +220,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
                   id: friend.id,
                   name: friend.name || '',
                   lastName: friend.lastName,
-                  // Backend'den tam URL geliyor
                   profilePhotoUrl: friend.profilePhotoUrl || 'assets/default-avatar.png'
                 };
                 
@@ -297,6 +321,16 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  toggleEmojiPicker() {
+    this.showEmojiPicker = !this.showEmojiPicker;
+  }
+
+  addEmoji(event: any) {
+    const emoji = event.emoji.native;
+    this.messageText = (this.messageText || '') + emoji;
+    // Emoji seçtikten sonra açık bırak (isteğe göre)
+    // this.showEmojiPicker = false;
+  }
 
   isOwnMessage(message: Message): boolean {
     return message.senderId === this.currentUser.id;

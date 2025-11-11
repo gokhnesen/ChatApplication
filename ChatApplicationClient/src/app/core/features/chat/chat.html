@@ -31,7 +31,42 @@
 
   <!-- Message input form -->
   <form (ngSubmit)="sendMessage()" class="chat-form">
-    <input [(ngModel)]="messageText" name="message" placeholder="Mesaj yaz..." required />
-    <button type="submit">Gönder</button>
+    <!-- Emoji Picker -->
+    <div class="emoji-picker-wrapper" *ngIf="showEmojiPicker">
+      <emoji-mart 
+        (emojiClick)="addEmoji($event)"
+        [darkMode]="true"
+        [showPreview]="false"
+        [perLine]="8"
+        [set]="'apple'"
+        title="Emoji seç"
+        emoji="point_up">
+      </emoji-mart>
+    </div>
+
+    <div class="input-wrapper">
+      <!-- Emoji Button - active class ekle -->
+      <button 
+        type="button" 
+        class="emoji-btn" 
+        [class.active]="showEmojiPicker"
+        (click)="toggleEmojiPicker()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
+      </button>
+
+      <input [(ngModel)]="messageText" name="message" placeholder="Mesaj yaz..." required />
+      
+      <button type="submit" [disabled]="!messageText?.trim()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
   </form>
 </div>

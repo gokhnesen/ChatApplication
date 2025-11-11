@@ -1,7 +1,80 @@
-<form (ngSubmit)="login()" class="auth-form">
-  <h2>Giriş Yap</h2>
-  <input [(ngModel)]="email" name="email" type="email" placeholder="Email" required />
-  <input [(ngModel)]="password" name="password" type="password" placeholder="Şifre" required />
-  <button type="submit">Giriş Yap</button>
-  <div *ngIf="error" class="error">{{ error }}</div>
-</form>
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-container">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <h1>Hoş Geldiniz</h1>
+      <p>Hesabınıza giriş yapın</p>
+    </div>
+
+    <form (ngSubmit)="login()" class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-envelope input-icon"></i>
+          <input 
+            id="email"
+            [(ngModel)]="email" 
+            name="email" 
+            type="email" 
+            placeholder="ornek@email.com" 
+            required 
+            autocomplete="email"
+            [disabled]="isLoading" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Şifre</label>
+        <div class="input-wrapper">
+          <i class="fas fa-lock input-icon"></i>
+          <input 
+            id="password"
+            [(ngModel)]="password" 
+            name="password" 
+            [type]="showPassword ? 'text' : 'password'" 
+            placeholder="••••••••" 
+            required 
+            autocomplete="current-password"
+            [disabled]="isLoading" />
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="togglePasswordVisibility()"
+            [disabled]="isLoading">
+            <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="error-message" *ngIf="error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+
+      <button type="submit" class="login-btn" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Giriş Yap</span>
+        <span *ngIf="isLoading" class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+          Giriş yapılıyor...
+        </span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>Hesabınız yok mu?</p>
+      <button type="button" class="register-link" (click)="navigateToRegister()">
+        Kayıt Ol
+      </button>
+    </div>
+  </div>
+
+  <div class="background-decoration">
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+    <div class="circle circle-3"></div>
+  </div>
+</div>

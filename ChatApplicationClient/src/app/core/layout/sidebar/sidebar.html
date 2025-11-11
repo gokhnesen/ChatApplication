@@ -1,41 +1,10 @@
 <div class="sidebar">
   <div class="profile-section">
-  <div class="avatar-row">
-    <!-- Mevcut avatar alanınız -->
-    <div class="avatar-container">
-      <img [src]="currentUser?.avatar || 'assets/default-avatar.png'" alt="Profil" class="profile-avatar">
-    </div>
-
-    <!-- Bildirim butonu -->
-    <div class="fr-anchor">
-      <button class="fr-btn" type="button" (click)="toggleRequests()" title="Gelen istekler">
-        🔔
-        <span class="badge" *ngIf="pendingRequests.length">{{ pendingRequests.length }}</span>
-      </button>
-
-      <!-- Dropdown -->
-      <div class="fr-dropdown" *ngIf="showRequests">
-        <div class="state" *ngIf="requestsLoading">Yükleniyor...</div>
-        <div class="state error" *ngIf="!requestsLoading && requestsError">{{ requestsError }}</div>
-        <div class="state" *ngIf="!requestsLoading && !requestsError && !pendingRequests.length">Bekleyen istek yok</div>
-
-        <div class="fr-item" *ngFor="let r of pendingRequests; trackBy: trackByRequest">
-          <img class="fr-avatar"
-               [src]="r.senderPhotoUrl || 'assets/default-avatar.png'"
-               (error)="onAvatarError($event)"
-               alt="avatar" />
-          <div class="fr-info">
-            <div class="fr-name">{{ r.senderName }} {{ r.senderLastName }}</div>
-            <div class="fr-meta">{{ r.senderEmail }} • {{ r.requestDate | date:'short' }}</div>
-          </div>
-          <div class="fr-actions">
-            <button class="accept" (click)="respond(r, true)"  [disabled]="isProcessing(r.friendshipId)">Kabul</button>
-            <button class="decline" (click)="respond(r, false)" [disabled]="isProcessing(r.friendshipId)">Reddet</button>
-          </div>
-        </div>
+    <div class="avatar-row">
+      <div class="avatar-container">
+        <img [src]="currentUser?.avatar || 'assets/default-avatar.png'" alt="Profil" class="profile-avatar">
       </div>
     </div>
-  </div>
     <h3>{{ currentUser?.name || 'Kullanıcı' }}</h3>
   </div>
 
@@ -58,5 +27,10 @@
     </button>
   </div>
 
-
+  <div class="sidebar-footer">
+    <button class="logout-btn" (click)="logout()" title="Çıkış Yap">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Çıkış Yap</span>
+    </button>
+  </div>
 </div>

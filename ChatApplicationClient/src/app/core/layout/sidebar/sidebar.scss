@@ -1,28 +1,25 @@
 .sidebar {
-  width: 180px; // Sabit genişlik
-  background-color: #1e2225;
+  width: 180px;
+  background: #202c33;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  z-index: 10; // z-index değerini yükselt
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  position: relative; // Pozisyon değerini ekle
-  overflow: visible; /* dropdown taşabilsin */
+  z-index: 10;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  border-right: 1px solid #2a3942;
+  position: relative;
+  overflow: visible;
 }
-
-// Hover genişlemesini kaldıralım
-// .sidebar:hover {
-//   width: 200px;
-// }
 
 .profile-section {
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-bottom: 1px solid #2a3942;
+  width: 100%;
 }
 
 .profile-avatar {
@@ -30,12 +27,13 @@
   height: 50px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #4CAF50;
+  border: 2px solid #00a884;
 }
 
 .sidebar h3 {
-  color: white;
+  color: #e9edef;
   font-size: 14px;
+  font-weight: 500;
   margin-top: 10px;
   white-space: nowrap;
 }
@@ -51,13 +49,14 @@
   display: flex;
   align-items: center;
   padding: 15px;
-  color: #a0a0a0;
+  color: #aebac1;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
   width: 100%;
+  position: relative;
 }
 
 .menu-item i {
@@ -71,9 +70,16 @@
   white-space: nowrap;
 }
 
-.menu-item:hover, .menu-item.active {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+.menu-item:hover {
+  color: #d1d7db;
+  background: #111b21;
+}
+
+.menu-item.active {
+  color: #e9edef;
+  background: #2a3942;
+  border-left: 3px solid #00a884;
+  padding-left: 12px;
 }
 
 .avatar-row {
@@ -87,7 +93,7 @@
 .fr-anchor {
   position: relative;
   display: inline-block;
-  margin-left: 6px; /* avatarın hemen sağında dursun */
+  margin-left: 6px;
 }
 
 .fr-btn {
@@ -97,23 +103,32 @@
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
+  color: #aebac1;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.fr-btn:hover {
+  background: #2a3942;
+  color: #d1d7db;
 }
 
 .fr-btn .badge {
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #e74c3c;
-  color: #fff;
+  background: #25d366;
+  color: #111b21;
   border-radius: 10px;
   padding: 0 6px;
   font-size: 11px;
+  font-weight: 600;
   line-height: 18px;
   min-width: 18px;
   text-align: center;
 }
 
-/* Dropdown sağ tarafa açılsın */
 .fr-dropdown {
   position: absolute;
   left: calc(100% + 8px);
@@ -122,11 +137,29 @@
   width: 340px;
   max-height: 420px;
   overflow: auto;
-  background: wheat;
-  border: 1px solid rgba(255,255,255,.08);
+  background: #202c33;
+  border: 1px solid #2a3942;
   border-radius: 8px;
   padding: 8px;
   z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #374249;
+    border-radius: 3px;
+
+    &:hover {
+      background: #3e4a52;
+    }
+  }
 }
 
 .fr-item {
@@ -136,13 +169,113 @@
   gap: 8px;
   padding: 8px;
   border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #111b21;
+  }
 }
-.fr-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
 
-.fr-info .fr-name { font-weight: 600; }
-.fr-info .fr-meta { font-size: 12px; opacity: .75; }
+.fr-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
-.fr-actions { display: flex; gap: 6px; align-items: center; }
-.fr-actions .accept  { background: #2ecc71; color: #0b2; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.fr-actions .decline { background: #e74c3c; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.fr-actions button[disabled] { opacity: .6; cursor: default; }
+.fr-info {
+  min-width: 0;
+
+  .fr-name {
+    font-weight: 500;
+    color: #e9edef;
+    font-size: 14px;
+  }
+
+  .fr-meta {
+    font-size: 12px;
+    color: #8696a0;
+    margin-top: 2px;
+  }
+}
+
+.fr-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.fr-actions .accept {
+  background: #00a884;
+  color: #111b21;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #06cf9c;
+  }
+}
+
+.fr-actions .decline {
+  background: transparent;
+  color: #8696a0;
+  border: 1px solid #2a3942;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #2a3942;
+    color: #d1d7db;
+  }
+}
+
+.fr-actions button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid #2a3942;
+  width: 100%;
+
+  .logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: 1px solid #2a3942;
+    border-radius: 8px;
+    color: #ea4335;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    i {
+      font-size: 16px;
+    }
+
+    &:hover {
+      background: rgba(234, 67, 53, 0.1);
+      border-color: #ea4335;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}

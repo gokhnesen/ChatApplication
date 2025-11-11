@@ -3,25 +3,32 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  width: 100%;
-  height: auto;
+  height: 100vh; // Tam ekran yükseklik
+  width: 100vw; // Tam ekran genişlik
   padding: 20px;
-  background: linear-gradient(135deg, #1a2a2a 0%, #2d3e3e 100%);
+  background: #111b21;
+  position: fixed; // Sabit pozisyon
+  top: 0;
+  left: 0;
+  overflow: auto; // İçerik taşarsa scroll
 }
 
 .edit-form {
-  background: rgba(255, 255, 255, 0.05);
+  background: #202c33;
   padding: 32px;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  max-width: 25%;
-  width: 25%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+  width: 100%;
+  margin: auto; // Ekstra ortalama
 }
 
 h2 {
   margin: 0 0 24px;
   text-align: center;
-  color: #fff;
+  color: #e9edef;
+  font-size: 24px;
+  font-weight: 500;
 }
 
 .photo-section {
@@ -37,7 +44,8 @@ h2 {
   height: 120px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  border: 3px solid #00a884;
+  box-shadow: 0 0 15px rgba(0, 168, 132, 0.3);
 }
 
 .photo-preview img {
@@ -47,17 +55,23 @@ h2 {
 }
 
 .photo-upload-btn {
-  background: #2ecc71;
-  color: #fff;
+  background: #2a3942;
+  color: #e9edef;
   padding: 8px 16px;
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s;
-}
+  font-weight: 500;
+  transition: all 0.2s;
 
-.photo-upload-btn:hover {
-  background: #27ae60;
+  &:hover {
+    background: #374249;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 
 .form-group {
@@ -67,72 +81,119 @@ h2 {
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #aebac1;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .form-group input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-size: 14px;
-}
+  padding: 12px 16px;
+  border: 1px solid #2a3942;
+  border-radius: 8px;
+  background: #111b21;
+  color: #e9edef;
+  font-size: 15px;
+  transition: all 0.2s;
 
-.form-group input:focus {
-  outline: none;
-  border-color: #2ecc71;
+  &:focus {
+    outline: none;
+    border-color: #00a884;
+    background: #111b21;
+  }
+
+  &::placeholder {
+    color: #8696a0;
+  }
 }
 
 .message {
-  padding: 10px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
   margin-bottom: 16px;
   text-align: center;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .message.error {
-  background: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
+  background: rgba(234, 67, 53, 0.1);
+  color: #ea4335;
+  border: 1px solid rgba(234, 67, 53, 0.3);
 }
 
 .message.success {
-  background: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
+  background: rgba(0, 168, 132, 0.1);
+  color: #00a884;
+  border: 1px solid rgba(0, 168, 132, 0.3);
 }
 
 .actions {
   display: flex;
   gap: 12px;
+  margin-top: 20px;
 }
 
 .actions button {
   flex: 1;
-  padding: 10px;
+  padding: 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  transition: opacity 0.2s;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
 .actions button[type="submit"] {
-  background: #2ecc71;
-  color: #fff;
-}
+  background: #00a884;
+  color: #111b21;
 
-.actions button[type="submit"]:hover:not(:disabled) {
-  opacity: 0.9;
+  &:hover:not(:disabled) {
+    background: #06cf9c;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 }
 
 .actions button[type="button"] {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: transparent;
+  color: #8696a0;
+  border: 1px solid #2a3942;
+
+  &:hover:not(:disabled) {
+    background: #2a3942;
+    color: #d1d7db;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 }
 
 .actions button:disabled {
-  opacity: 0.6;
-  cursor: default;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .edit-user-container {
+    padding: 16px;
+  }
+
+  .edit-form {
+    max-width: 100%;
+    padding: 24px;
+  }
+
+  .actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
 }
