@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChatApplication.Application.Features.User.Commands
+namespace ChatApplication.Application.Features.User.Commands.Register
 {
     public class RegisterUserCommandResponse
     {

@@ -18,8 +18,24 @@ namespace ChatApplication.Domain.Entities
 
         public bool IsRead { get; set; } = false;
 
+        public MessageType Type { get; set; } = MessageType.Text;
+
+        public string? AttachmentUrl { get; set; }
+
+        public string? AttachmentName { get; set; }
+
+        public long? AttachmentSize { get; set; }
+
         public ApplicationUser Sender { get; set; }
 
         public ApplicationUser Receiver { get; set; }
+    }
+
+    public enum MessageType
+    {
+        Text = 0,
+        Image = 1,
+        File = 2,
+        Video =3
     }
 }

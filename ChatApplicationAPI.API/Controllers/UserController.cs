@@ -1,4 +1,4 @@
-﻿using ChatApplication.Application.Features.User.Commands;
+﻿using ChatApplication.Application.Features.User.Commands.Register;
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;

@@ -5,7 +5,6 @@ using ChatApplication.Persistence;
 using ChatApplication.Persistence.DbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi.Models;
-using System.Reflection;
 
 namespace ChatApplicationAPI.API
 {
@@ -26,7 +25,11 @@ namespace ChatApplicationAPI.API
                     Version = "v1",
                     Description = "Gerçek zamanlı mesajlaşma uygulaması API'si"
                 });
+
+                // Dosya yükleme için Swagger desteği
+                c.OperationFilter<FileUploadOperationFilter>();
             });
+            
             builder.Services.AddOpenApi();
             builder.Services.AddApplicationServices();
             builder.Services.AddPersistenceServices(builder.Configuration);
@@ -35,7 +38,6 @@ namespace ChatApplicationAPI.API
             builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ChatAppDbContext>();
-
 
             builder.Services.AddCors(options =>
             {

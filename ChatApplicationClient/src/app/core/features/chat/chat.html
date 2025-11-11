@@ -1,7 +1,6 @@
 <div class="chat-container">
   <!-- Chat header with recipient info -->
   <div class="chat-header" *ngIf="receiverUser">
-    <!-- Receiver avatar -->
     <img [src]="receiverUser.profilePhotoUrl | profilePhoto" alt="Receiver avatar" class="header-avatar" />
     <div class="header-info">
       <h3>{{ receiverUser?.name }} {{ receiverUser?.lastName }}</h3>
@@ -14,10 +13,55 @@
     <ng-container *ngFor="let msg of messages">
       <div class="message-box" [class.own-message]="isOwnMessage(msg)">
         <div class="message-content">
-          <div class="message-text">{{ msg.content }}</div>
+          <!-- DOSYA/RESİM/VİDEO MESAJI -->
+          <div *ngIf="msg.type === MessageType.Image || msg.type === MessageType.File || msg.type === MessageType.Video">
+            <!-- Resim mesajı -->
+            <div *ngIf="msg.type === MessageType.Image" class="message-image">
+              <img 
+                [src]="'https://localhost:7055' + msg.attachmentUrl" 
+                [alt]="msg.attachmentName || 'Resim'"
+                (click)="openImagePreview('https://localhost:7055' + msg.attachmentUrl)"
+                class="chat-image"
+                (error)="onImageError($event)">
+              <p class="image-caption" *ngIf="msg.content !== msg.attachmentName">{{ msg.content }}</p>
+            </div>
+
+            <!-- Video mesajı -->
+            <div *ngIf="msg.type === MessageType.Video" class="message-video">
+              <video 
+                [src]="'https://localhost:7055' + msg.attachmentUrl" 
+                controls
+                class="chat-video"
+                preload="metadata">
+                Tarayıcınız video oynatmayı desteklemiyor.
+              </video>
+              <p class="video-caption" *ngIf="msg.content !== msg.attachmentName">{{ msg.content }}</p>
+            </div>
+            
+            <!-- Dosya mesajı -->
+            <div *ngIf="msg.type === MessageType.File" class="message-file">
+              <a [href]="'https://localhost:7055' + msg.attachmentUrl" 
+                 [download]="msg.attachmentName"
+                 class="file-download-link">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="12" y1="18" x2="12" y2="12"></line>
+                  <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                <div class="file-info">
+                  <span class="file-name">{{ msg.attachmentName }}</span>
+                  <span class="file-size">{{ formatFileSize(msg.attachmentSize) }}</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- NORMAL METIN MESAJI -->
+          <div *ngIf="msg.type === MessageType.Text" class="message-text">{{ msg.content }}</div>
+          
           <div class="message-footer">
             <small class="message-time">{{ msg.sentAt | date:'short' }}</small>
-            <!-- Kendi mesajlarımız için okundu göstergesi -->
             <span class="read-indicator" *ngIf="isOwnMessage(msg)">
               <i [class]="msg.isRead ? 'read-icon' : 'unread-icon'">
                 {{ msg.isRead ? '✓✓' : '✓' }}
@@ -44,13 +88,94 @@
       </emoji-mart>
     </div>
 
+    <!-- Dosya önizleme -->
+    <div class="file-preview" *ngIf="selectedFile">
+      <div class="preview-container">
+        <!-- Resim önizleme -->
+        <img *ngIf="selectedFilePreview && selectedFile.type.startsWith('image/')" 
+             [src]="selectedFilePreview" 
+             alt="Preview" 
+             class="preview-image">
+        
+        <!-- Video önizleme -->
+        <video *ngIf="selectedFilePreview && selectedFile.type.startsWith('video/')"
+               [src]="selectedFilePreview"
+               controls
+               class="preview-video">
+        </video>
+        
+        <!-- Diğer dosya önizleme -->
+        <div *ngIf="!selectedFilePreview || (!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/'))" 
+             class="preview-file">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <p>{{ selectedFile.name }}</p>
+        </div>
+        
+        <button type="button" class="remove-file-btn" (click)="cancelFile()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <div class="input-wrapper">
-      <!-- Emoji Button - active class ekle -->
+      <!-- Video kayıt butonu -->
+      <button 
+        type="button" 
+        class="video-btn" 
+        (click)="openVideoRecorder()"
+        [disabled]="isUploading || showCamera || showVideoRecorder"
+        title="Video kaydet">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="23 7 16 12 23 17 23 7"></polygon>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+      </button>
+
+      <!-- Kamera butonu -->
+      <button 
+        type="button" 
+        class="camera-btn" 
+        (click)="openCamera()"
+        [disabled]="isUploading || showCamera || showVideoRecorder"
+        title="Fotoğraf çek">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+      </button>
+
+      <!-- Dosya yükleme butonu -->
+      <input 
+        type="file" 
+        #fileInput 
+        (change)="onFileSelected($event)" 
+        accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xlsx,.zip,.rar"
+        style="display: none">
+      
+      <button 
+        type="button" 
+        class="file-btn" 
+        (click)="fileInput.click()"
+        [disabled]="isUploading || showCamera || showVideoRecorder"
+        title="Dosya ekle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+      </button>
+
+      <!-- Emoji Button -->
       <button 
         type="button" 
         class="emoji-btn" 
         [class.active]="showEmojiPicker"
-        (click)="toggleEmojiPicker()">
+        (click)="toggleEmojiPicker()"
+        [disabled]="showCamera || showVideoRecorder">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
@@ -59,14 +184,163 @@
         </svg>
       </button>
 
-      <input [(ngModel)]="messageText" name="message" placeholder="Mesaj yaz..." required />
+      <input 
+        [(ngModel)]="messageText" 
+        name="message" 
+        placeholder="Mesaj yaz..." 
+        [disabled]="isUploading || showCamera || showVideoRecorder" />
       
-      <button type="submit" [disabled]="!messageText?.trim()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button 
+        type="submit" 
+        [disabled]="(!messageText?.trim() && !selectedFile) || isUploading || showCamera || showVideoRecorder">
+        <svg *ngIf="!isUploading" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
         </svg>
+        <div *ngIf="isUploading" class="spinner-small"></div>
       </button>
     </div>
   </form>
+
+  <!-- Kamera Modal -->
+  <div class="camera-modal" *ngIf="showCamera">
+    <div class="camera-container">
+      <div class="camera-header">
+        <h3>Fotoğraf Çek</h3>
+        <button class="close-camera-btn" (click)="stopCamera()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="camera-view">
+        <!-- Video önizleme -->
+        <video #videoElement *ngIf="!capturedImage" autoplay playsinline></video>
+        
+        <!-- Çekilen fotoğraf önizleme -->
+        <img *ngIf="capturedImage" [src]="capturedImage" alt="Captured photo">
+        
+        <!-- Canvas (gizli, sadece fotoğraf çekmek için) -->
+        <canvas #canvasElement style="display: none;"></canvas>
+      </div>
+
+      <div class="camera-controls">
+        <button 
+          *ngIf="!capturedImage" 
+          type="button" 
+          class="capture-btn" 
+          (click)="capturePhoto()">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+          <span>Çek</span>
+        </button>
+
+        <div *ngIf="capturedImage" class="captured-controls">
+          <button type="button" class="retake-btn" (click)="retakePhoto()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            Tekrar Çek
+          </button>
+          <button type="button" class="use-photo-btn" (click)="stopCamera()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Kullan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resim Önizleme Modal -->
+  <div class="image-preview-modal" *ngIf="imagePreviewUrl" (click)="closeImagePreview()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <button class="close-btn" (click)="closeImagePreview()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <img [src]="imagePreviewUrl" alt="Preview">
+    </div>
+  </div>
+
+  <!-- Video Recorder Modal -->
+  <div class="video-recorder-modal" *ngIf="showVideoRecorder">
+    <div class="recorder-container">
+      <div class="recorder-header">
+        <h3>Video Kaydet</h3>
+        <button class="close-recorder-btn" (click)="closeVideoRecorder()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="recorder-view">
+        <!-- Canlı önizleme -->
+        <video #videoPreviewElement *ngIf="!recordedVideoUrl" autoplay playsinline muted></video>
+        
+        <!-- Kaydedilen video -->
+        <video #recordedVideoElement *ngIf="recordedVideoUrl" controls></video>
+
+        <!-- Kayıt durumu -->
+        <div class="recording-indicator" *ngIf="isRecording">
+          <span class="rec-dot"></span>
+          <span class="rec-time">{{ formatRecordingTime() }}</span>
+          <span class="rec-remaining">Kalan: {{ getRemainingTime() }}</span>
+        </div>
+      </div>
+
+      <div class="recorder-controls">
+        <!-- Kayıt başlat/durdur -->
+        <div *ngIf="!recordedVideoUrl" class="recording-controls">
+          <button 
+            *ngIf="!isRecording" 
+            type="button" 
+            class="start-recording-btn" 
+            (click)="startVideoRecording()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            <span>Kayda Başla</span>
+          </button>
+
+          <button 
+            *ngIf="isRecording" 
+            type="button" 
+            class="stop-recording-btn" 
+            (click)="stopVideoRecording()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+            </svg>
+            <span>Durdur</span>
+          </button>
+        </div>
+
+        <!-- Kaydedilen video kontrolleri -->
+        <div *ngIf="recordedVideoUrl" class="recorded-controls">
+          <button type="button" class="retake-btn" (click)="retakeVideo()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            Tekrar Kaydet
+          </button>
+          <button type="button" class="use-video-btn" (click)="useRecordedVideo()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Kullan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

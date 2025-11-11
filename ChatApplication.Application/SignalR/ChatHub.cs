@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using ChatApplication.Domain.Entities;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApplication.Application.SignalR
@@ -12,11 +13,16 @@ namespace ChatApplication.Application.SignalR
             _logger = logger;
         }
 
-        public async Task SendMessage(string receiverId, string content)
+        public async Task SendMessage(
+            string receiverId, 
+            string content, 
+            int type = 0, 
+            string? attachmentUrl = null, 
+            string? attachmentName = null, 
+            long? attachmentSize = null)
         {
             try
             {
-                // Context.UserIdentifier ile gönderen kullanıcının ID'sini al
                 var senderId = Context.UserIdentifier;
 
                 if (string.IsNullOrEmpty(senderId))
@@ -25,13 +31,25 @@ namespace ChatApplication.Application.SignalR
                     throw new HubException("Kullanıcı kimliği bulunamadı");
                 }
 
-                _logger.LogInformation("SignalR mesaj iletiliyor: {SenderId} -> {ReceiverId}", senderId, receiverId);
+                _logger.LogInformation(
+                    "SignalR mesaj iletiliyor: {SenderId} -> {ReceiverId}, Type: {Type}, HasAttachment: {HasAttachment}", 
+                    senderId, receiverId, type, !string.IsNullOrEmpty(attachmentUrl));
 
-                // Alıcıya mesajı gönder
-                await Clients.User(receiverId).SendAsync("ReceiveMessage", senderId, content);
+                await Clients.User(receiverId).SendAsync("ReceiveMessage", 
+                    senderId, 
+                    content,
+                    type,
+                    attachmentUrl,
+                    attachmentName,
+                    attachmentSize);
 
-                // Göndericiye de geri bildir (birden fazla cihaz veya sekme için)
-                await Clients.Caller.SendAsync("MessageSent", receiverId, content);
+                await Clients.Caller.SendAsync("MessageSent", 
+                    receiverId, 
+                    content,
+                    type,
+                    attachmentUrl,
+                    attachmentName,
+                    attachmentSize);
             }
             catch (Exception ex)
             {
@@ -69,6 +87,7 @@ namespace ChatApplication.Application.SignalR
             
             await base.OnDisconnectedAsync(exception);
         }
+
         public async Task NotifyMessagesRead(List<string> messageIds)
         {
             try
@@ -84,8 +103,7 @@ namespace ChatApplication.Application.SignalR
                 _logger.LogInformation("{Count} mesaj okundu olarak işaretlendi: {SenderId}",
                     messageIds.Count, senderId);
 
-                // Mesaj göndericisine bildir (MessageRead event)
-                await Clients.User(senderId).SendAsync("MessageRead", messageIds);
+                await Clients.User(senderId).SendAsync("MessagesRead", messageIds);
             }
             catch (Exception ex)
             {

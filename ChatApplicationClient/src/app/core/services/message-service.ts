@@ -18,7 +18,7 @@ export class MessageService {
   }
 
   sendMessage(command: any): Observable<any> {
-    return this.httpClient.post<any>(`${this.apiUrl}/message`, command);
+    return this.httpClient.post<any>(`${this.apiUrl}/message/send`, command);
   }
 
   getMessages(userId1: string, userId2: string): Observable<Message[]> {
@@ -26,7 +26,7 @@ export class MessageService {
   }
 
   markAsRead(userId: string, senderId: string): Observable<any> {
-    return this.httpClient.put(`${this.apiUrl}/message/mark-as-read`, { 
+    return this.httpClient.post(`${this.apiUrl}/message/mark-as-read`, { 
       userId, 
       senderId 
     });
@@ -38,5 +38,12 @@ export class MessageService {
 
   getLatestMessage(userId1: string, userId2: string): Observable<Message> {
     return this.httpClient.get<Message>(`${this.apiUrl}/message/latest/${userId1}/${userId2}`);
+  }
+
+  uploadFile(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.httpClient.post<any>(`${this.apiUrl}/message/upload-attachment`, formData);
   }
 }

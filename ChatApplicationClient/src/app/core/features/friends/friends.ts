@@ -7,7 +7,7 @@ import { MessageService } from '../../services/message-service';
 import { UserService } from '../../services/user-service';
 import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { Friend, PendingFriendRequest } from '../../shared/models/friend';
-import { Message } from '../../shared/models/message';
+import { Message, MessageType } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
@@ -28,6 +28,7 @@ export class Friends implements OnInit, OnDestroy {
   currentUser: any = null;
   pendingRequestCount: number = 0;
   showFriendRequests: boolean = false;
+  MessageType = MessageType; // ✅ HTML'de kullanmak için
   
   pendingRequests: PendingFriendRequest[] = [];
   requestsLoading: boolean = false;
@@ -308,14 +309,24 @@ export class Friends implements OnInit, OnDestroy {
             update.senderId,
             update.receiverId,
             update.sentAt,
-            update.isOwn
+            update.isOwn,
+            update.type || MessageType.Text,
+            update.attachmentUrl,
+            update.attachmentName
           );
         });
       })
     );
 
-    // SignalR de dinle (fallback)
-    this.signalRService.onReceiveMessage((senderId: string, content: string) => {
+    // ✅ GÜNCELLENECEK - 6 parametre al
+    this.signalRService.onReceiveMessage((
+      senderId: string, 
+      content: string,
+      type?: MessageType,
+      attachmentUrl?: string | null,
+      attachmentName?: string | null,
+      attachmentSize?: number | null
+    ) => {
       this.ngZone.run(() => {
         this.handleNewMessage(
           senderId,
@@ -323,12 +334,23 @@ export class Friends implements OnInit, OnDestroy {
           senderId,
           this.currentUserId,
           new Date(),
-          false
+          false,
+          type || MessageType.Text,
+          attachmentUrl,
+          attachmentName
         );
       });
     });
 
-    this.signalRService.onMessageSent((receiverId: string, content: string) => {
+    // ✅ GÜNCELLENECEK - 6 parametre al
+    this.signalRService.onMessageSent((
+      receiverId: string, 
+      content: string,
+      type?: MessageType,
+      attachmentUrl?: string | null,
+      attachmentName?: string | null,
+      attachmentSize?: number | null
+    ) => {
       this.ngZone.run(() => {
         this.handleNewMessage(
           receiverId,
@@ -336,7 +358,10 @@ export class Friends implements OnInit, OnDestroy {
           this.currentUserId,
           receiverId,
           new Date(),
-          true
+          true,
+          type || MessageType.Text,
+          attachmentUrl,
+          attachmentName
         );
       });
     });
@@ -348,7 +373,10 @@ export class Friends implements OnInit, OnDestroy {
     senderId: string,
     receiverId: string,
     sentAt: Date,
-    isOwn: boolean
+    isOwn: boolean,
+    type: MessageType = MessageType.Text, // ✅ TİP PARAMETRESİ EKLE
+    attachmentUrl?: string | null,
+    attachmentName?: string | null
   ): void {
     const friend = this.friends.find(f => f.id === friendId);
     if (!friend) return;
@@ -360,7 +388,10 @@ export class Friends implements OnInit, OnDestroy {
       content: content,
       sentAt: sentAt,
       isRead: false,
-      hasMessage: true
+      hasMessage: true,
+      type: type, // ✅ TİPİ EKLE
+      attachmentUrl: attachmentUrl,
+      attachmentName: attachmentName
     };
 
     this.friendMessages.set(friend.id, newMessage);
@@ -412,6 +443,7 @@ export class Friends implements OnInit, OnDestroy {
     return this.friendMessages.get(friend.id) || null;
   }
 
+  // ✅ YENİ FONKSİYON: Mesaj önizlemesini tip bazlı göster
   getLastMessagePreview(friend: Friend): string {
     const message = this.getLastMessage(friend);
     
@@ -421,11 +453,25 @@ export class Friends implements OnInit, OnDestroy {
 
     const isOwn = message.senderId === this.currentUserId;
     const prefix = isOwn ? 'Sen: ' : '';
-    const content = message.content.length > 30 
-      ? message.content.substring(0, 30) + '...' 
-      : message.content;
-    
-    return prefix + content;
+
+    // Mesaj tipine göre önizleme
+    switch (message.type) {
+      case MessageType.Image:
+        return prefix + '📷 Fotoğraf';
+      
+      case MessageType.Video:
+        return prefix + '📹 Video';
+      
+      case MessageType.File:
+        return prefix + '📎 ' + (message.attachmentName || 'Dosya');
+      
+      case MessageType.Text:
+      default:
+        const content = message.content.length > 30 
+          ? message.content.substring(0, 30) + '...' 
+          : message.content;
+        return prefix + content;
+    }
   }
 
   getLastMessageTime(friend: Friend): string {
