@@ -1,12 +1,24 @@
 <div class="friends-container">
 
-  <!-- KULLANICI BAŞLIĞI -->
   <div class="me-header">
     <img class="me-avatar"
          [src]="currentUser?.profilePhotoUrl | profilePhoto">
     <div class="me-meta">
-      <div class="me-name">{{ currentUser?.name }} {{ currentUser?.lastName }}</div>
-      <div class="me-username" *ngIf="currentUser?.userName">@{{ currentUser?.userName }}</div>
+      <div class="me-info">
+        <div class="me-name">{{ currentUser?.name }} {{ currentUser?.lastName }}</div>
+        <div class="me-username" *ngIf="currentUser?.userName">@{{ currentUser?.userName }}</div>
+      </div>
+      <div class="friend-requests-wrapper" *ngIf="pendingRequestCount > 0">
+        <button class="friend-requests-btn" (click)="openFriendRequests()" title="Arkadaşlık İstekleri">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span class="request-badge">{{ pendingRequestCount }}</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -51,6 +63,97 @@
 
     <div *ngIf="filteredFriends.length === 0" class="no-friends">
       <p>{{ searchText ? 'Arkadaş bulunamadı' : 'Henüz arkadaşınız yok' }}</p>
+    </div>
+  </div>
+
+  <!-- Friend Requests Modal -->
+  <div class="friend-requests-modal" *ngIf="showFriendRequests" (click)="closeFriendRequests()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Arkadaşlık İstekleri</h2>
+        <button class="close-btn" (click)="closeFriendRequests()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="requestsLoading">
+          <div class="spinner"></div>
+          <p>Yükleniyor...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" *ngIf="!requestsLoading && requestsError">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h3>Hata oluştu</h3>
+          <p>{{ requestsError }}</p>
+          <button class="retry-btn" (click)="loadPendingRequests()">Tekrar Dene</button>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!requestsLoading && !requestsError && pendingRequests.length === 0">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <h3>Bekleyen istek yok</h3>
+          <p>Yeni arkadaşlık istekleri burada görünecek</p>
+        </div>
+
+        <!-- Requests List -->
+        <div class="requests-list" *ngIf="!requestsLoading && !requestsError && pendingRequests.length > 0">
+          <div class="request-item" *ngFor="let request of pendingRequests; trackBy: trackByRequest">
+            <div class="request-avatar">
+              <img 
+                [src]="request.senderProfilePhotoUrl | profilePhoto" 
+                [alt]="request.senderName"
+                (error)="onAvatarError($event)"
+                class="avatar-img">
+            </div>
+
+            <div class="request-info">
+              <div class="request-name">{{ request.senderName }} {{ request.senderLastName }}</div>
+              <div class="request-meta">
+                <span class="email">{{ request.senderEmail }}</span>
+                <span class="separator">•</span>
+                <span class="date">{{ request.requestDate | date:'dd.MM.yyyy HH:mm' }}</span>
+              </div>
+            </div>
+
+            <div class="request-actions">
+              <button 
+                class="accept-btn" 
+                (click)="respondToRequest(request, true)" 
+                [disabled]="isProcessingRequest(request.friendshipId)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Kabul Et
+              </button>
+              <button 
+                class="decline-btn" 
+                (click)="respondToRequest(request, false)" 
+                [disabled]="isProcessingRequest(request.friendshipId)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Reddet
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -6,7 +6,7 @@ import { FriendService } from '../../services/friend-service';
 import { MessageService } from '../../services/message-service';
 import { UserService } from '../../services/user-service';
 import { ChatSignalrService } from '../../services/chat-signalr-service';
-import { Friend } from '../../shared/models/friend';
+import { Friend, PendingFriendRequest } from '../../shared/models/friend';
 import { Message } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
@@ -18,7 +18,7 @@ import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
   templateUrl: './friends.html',
   styleUrls: ['./friends.scss']
 })
-export class Friends implements OnInit {
+export class Friends implements OnInit, OnDestroy {
   friends: Friend[] = [];
   filteredFriends: Friend[] = [];
   selectedFriend: Friend | null = null;
@@ -26,7 +26,14 @@ export class Friends implements OnInit {
   currentUserId: string = '';
   friendMessages: Map<string, Message | null> = new Map();
   currentUser: any = null;
+  pendingRequestCount: number = 0;
+  showFriendRequests: boolean = false;
   
+  pendingRequests: PendingFriendRequest[] = [];
+  requestsLoading: boolean = false;
+  requestsError: string | null = null;
+  private processingRequests = new Set<string>();
+
   private messageService = inject(MessageService);
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
@@ -37,13 +44,13 @@ export class Friends implements OnInit {
 
   private initialized = false;
   private pendingFriendId: string | null = null;
+  private pendingRequestInterval: any;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private friendService: FriendService
   ) {
-    // Signal'ı effect ile dinle
     effect(() => {
       const user = this.userService.currentUser();
       if (user) {
@@ -55,6 +62,8 @@ export class Friends implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadPendingRequestCount();
+
     this.subscriptions.push(
       this.route.paramMap.subscribe((params: ParamMap) => {
         this.pendingFriendId = params.get('id');
@@ -68,14 +77,12 @@ export class Friends implements OnInit {
       })
     );
 
-    // Signal'dan kullanıcıyı al
     const user = this.userService.currentUser();
     if (user) {
       this.currentUser = user;
       this.currentUserId = user.id;
       this.initAfterUser();
     } else {
-      // Backend'den getir
       this.subscriptions.push(
         this.userService.getUserInfo().subscribe({
           next: (u) => {
@@ -89,6 +96,96 @@ export class Friends implements OnInit {
         })
       );
     }
+
+    // Her 30 saniyede bir istek sayısını güncelle
+    this.pendingRequestInterval = setInterval(() => this.loadPendingRequestCount(), 30000);
+  }
+
+  loadPendingRequestCount(): void {
+    this.friendService.getPendingRequests().subscribe({
+      next: (requests) => {
+        this.pendingRequestCount = requests?.length || 0;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Bekleyen istek sayısı alınamadı:', err);
+      }
+    });
+  }
+
+  openFriendRequests(): void {
+    this.showFriendRequests = true;
+    this.loadPendingRequests();
+  }
+
+  closeFriendRequests(): void {
+    this.showFriendRequests = false;
+    this.pendingRequests = [];
+    this.requestsError = null;
+  }
+
+  loadPendingRequests(): void {
+    this.requestsLoading = true;
+    this.requestsError = null;
+    
+    this.friendService.getPendingRequests().subscribe({
+      next: (requests) => {
+        this.pendingRequests = requests || [];
+        this.pendingRequestCount = this.pendingRequests.length;
+        this.requestsLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.requestsError = err?.error?.message || 'İstekler yüklenirken hata oluştu';
+        this.requestsLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  isProcessingRequest(friendshipId: string): boolean {
+    return this.processingRequests.has(friendshipId);
+  }
+
+  respondToRequest(request: PendingFriendRequest, accept: boolean): void {
+    const fid = request.friendshipId;
+    if (this.processingRequests.has(fid)) return;
+    
+    this.processingRequests.add(fid);
+
+    this.friendService.respondToFriendRequestById(fid, accept).subscribe({
+      next: () => {
+        this.processingRequests.delete(fid);
+        this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== fid);
+        this.pendingRequestCount = this.pendingRequests.length;
+        
+        // Eğer kabul edildiyse arkadaş listesini yenile
+        if (accept) {
+          this.loadFriendsWithMessages();
+        }
+        
+        // Eğer tüm istekler işlendiyse modalı kapat
+        if (this.pendingRequests.length === 0) {
+          this.closeFriendRequests();
+        }
+        
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.processingRequests.delete(fid);
+        alert(err?.error?.message || 'İstek işlenirken hata oluştu');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  trackByRequest(_: number, r: PendingFriendRequest): string {
+    return r.friendshipId;
+  }
+
+  onAvatarError(evt: Event): void {
+    const img = evt.target as HTMLImageElement;
+    img.src = 'assets/default-avatar.png';
   }
 
   private initAfterUser(): void {
@@ -100,15 +197,18 @@ export class Friends implements OnInit {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    
+    // Interval'ı temizle
+    if (this.pendingRequestInterval) {
+      clearInterval(this.pendingRequestInterval);
+    }
   }
 
   selectFriend(friend: Friend): void {
     this.selectedFriend = friend;
     friend.unreadMessageCount = 0;
-    
     // Son seçilen arkadaşı localStorage'a kaydet
     localStorage.setItem('lastSelectedFriendId', friend.id);
-    
     this.cdr.detectChanges();
     this.router.navigate(['/chat', friend.id]);
   }

@@ -6,6 +6,7 @@ import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
 import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
 interface SearchUser {
   id: string;
@@ -15,12 +16,13 @@ interface SearchUser {
   userName: string;
   friendCode: string;
   profilePhotoUrl: string | null;
+  friendshipStatus?: 'none' | 'pending' | 'friend'; // Backend'den gelebilir
 }
 
 @Component({
   selector: 'app-add-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule,ProfilePhotoPipe],
   templateUrl: './add-friends.html',
   styleUrls: ['./add-friends.scss']
 })
@@ -31,10 +33,10 @@ export class AddFriends implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
   private lastSearchTerm = '';
-  // Arkadaş kontrolü ve buton durumu için
   myFriendIds = new Set<string>();
   private requestedIds = new Set<string>();
   private loadingIds = new Set<string>();
+  private profilePhotoPipe = new ProfilePhotoPipe();
 
   constructor(
     private userService: UserService,
@@ -44,7 +46,7 @@ export class AddFriends implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Mevcut arkadaşları yükle (zaten arkadaş mı kontrolü için)
+    // Mevcut arkadaşları yükle
     this.subscriptions.push(
       this.friendService.getMyFriends().subscribe({
         next: (friends: any[]) => {
@@ -53,6 +55,9 @@ export class AddFriends implements OnInit, OnDestroy {
         error: () => {}
       })
     );
+
+    // Bekleyen arkadaşlık isteklerini yükle
+    this.loadPendingRequests();
 
     this.subscriptions.push(
       this.searchSubject.pipe(
@@ -63,7 +68,7 @@ export class AddFriends implements OnInit, OnDestroy {
           this.lastSearchTerm = term;
           if (term.length === 0) {
             this.users = [];
-            return of([]); // boş observable döndür
+            return of([]);
           }
           this.isLoading = true;
           return this.userService.searchUsers(term);
@@ -75,6 +80,15 @@ export class AddFriends implements OnInit, OnDestroy {
             const term = this.normalize(this.lastSearchTerm);
             const data: SearchUser[] = response.data || [];
             this.users = data.filter(u => this.isExactMatch(u, term));
+            
+            // Backend'den gelen friendship durumlarını kontrol et
+            this.users.forEach(user => {
+              if (user.friendshipStatus === 'pending') {
+                this.requestedIds.add(user.id);
+              } else if (user.friendshipStatus === 'friend') {
+                this.myFriendIds.add(user.id);
+              }
+            });
           } else {
             this.users = [];
           }
@@ -87,6 +101,31 @@ export class AddFriends implements OnInit, OnDestroy {
     );
   }
 
+  private loadPendingRequests(): void {
+    // Gönderilen bekleyen istekleri yükle
+    this.friendService.getPendingRequests().subscribe({
+      next: (requests: any[]) => {
+        // Sadece kendimin gönderdiği istekleri al (sender olarak)
+        const sentRequests = (requests || []).filter((r: any) => r.senderId === this.userService.currentUser()?.id);
+        this.requestedIds = new Set(sentRequests.map((r: any) => r.receiverId));
+      },
+      error: () => {}
+    });
+  }
+
+  private checkPendingRequestsForUsers(): void {
+    // Arama sonuçlarındaki kullanıcılar için bekleyen istekleri kontrol et
+    if (this.users.length === 0) return;
+    
+    this.friendService.getPendingRequests().subscribe({
+      next: (requests: any[]) => {
+        const sentRequests = (requests || []).filter((r: any) => r.senderId === this.userService.currentUser()?.id);
+        this.requestedIds = new Set(sentRequests.map((r: any) => r.receiverId));
+      },
+      error: () => {}
+    });
+  }
+
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.searchSubject.complete();
@@ -97,13 +136,18 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   selectUser(u: any) {
-    // Soldaki listeden bir kullanıcıya tıklanınca sağdaki router-outlet'e Chat’i yükle
     this.router.navigate([u.id], { relativeTo: this.route });
   }
 
   addFriend(user: SearchUser): void {
-    if (this.isAlreadyFriend(user)) { alert('Zaten arkadaşsınız.'); return; }
-    if (this.isRequesting(user)) return;
+    if (this.isAlreadyFriend(user)) { 
+      alert('Zaten arkadaşsınız.'); 
+      return; 
+    }
+    if (this.requestedIds.has(user.id)) {
+      alert('Arkadaşlık isteği zaten gönderilmiş.');
+      return;
+    }
 
     this.loadingIds.add(user.id);
     this.friendService.sendFriendRequest({ receiverId: user.id }).subscribe({
@@ -113,12 +157,24 @@ export class AddFriends implements OnInit, OnDestroy {
           this.requestedIds.add(user.id);
           alert('Arkadaşlık isteği gönderildi!');
         } else {
+          // Eğer zaten gönderilmişse, requestedIds'e ekle
+          if (res?.message?.includes('zaten gönderilmiş') || 
+              res?.errors?.some((e: string) => e.includes('already exists'))) {
+            this.requestedIds.add(user.id);
+          }
           alert(res?.message || 'Arkadaşlık isteği gönderilemedi.');
         }
       },
       error: (err) => {
         this.loadingIds.delete(user.id);
         const msg = err?.error?.message || 'Arkadaşlık isteği gönderilemedi.';
+        
+        // Eğer zaten gönderilmişse, requestedIds'e ekle
+        if (msg.includes('zaten gönderilmiş') || 
+            err?.error?.errors?.some((e: string) => e.includes('already exists'))) {
+          this.requestedIds.add(user.id);
+        }
+        
         alert(msg);
       }
     });
@@ -133,10 +189,6 @@ export class AddFriends implements OnInit, OnDestroy {
     });
   }
 
-  getUserAvatar(user: SearchUser): string {
-    return user.profilePhotoUrl || 'assets/default-avatar.png';
-  }
-
   private isExactMatch(u: SearchUser, term: string): boolean {
     const email = this.normalize(u.email);
     const userName = this.normalize(u.userName);
@@ -144,11 +196,12 @@ export class AddFriends implements OnInit, OnDestroy {
     const fullName = this.normalize(`${u.name} ${u.lastName}`);
     const fullNameAlt = this.normalize(`${u.lastName} ${u.name}`);
 
-    return term === email
-        || term === userName
-        || term === friendCode
-        || term === fullName
-        || term === fullNameAlt;
+    // TAM EŞLEŞME yerine IÇEREN kontrolü
+    return email.includes(term)
+        || userName.includes(term)
+        || friendCode.includes(term)
+        || fullName.includes(term)
+        || fullNameAlt.includes(term);
   }
 
   private normalize(text: string): string {
@@ -161,6 +214,15 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   isRequesting(user: SearchUser): boolean {
-    return this.loadingIds.has(user.id) || this.requestedIds.has(user.id);
+    return this.loadingIds.has(user.id);
   }
+
+  isRequestSent(user: SearchUser): boolean {
+    return this.requestedIds.has(user.id);
+  }
+
+  getUserAvatar(user: SearchUser): string {
+    return this.profilePhotoPipe.transform(user.profilePhotoUrl);
+  }
+
 }

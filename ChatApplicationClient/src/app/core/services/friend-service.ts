@@ -2,18 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, switchMap } from 'rxjs';
 import { UserService } from './user-service';
-import { Friend } from '../shared/models/friend';
+import { Friend, PendingFriendRequest } from '../shared/models/friend';
 import { environment } from '../../../environments/environment';
 
-export interface PendingFriendRequest {
-  friendshipId: string;
-  senderId: string;
-  senderName: string;
-  senderLastName: string;
-  senderEmail: string;
-  requestDate: string;
-  senderPhotoUrl: string | null;
-}
+
 
 @Injectable({
   providedIn: 'root'
@@ -27,7 +19,6 @@ export class FriendService {
     return this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, command, { withCredentials: true });
   }
 
-  // URL birleştirme kaldırıldı - Pipe halledecek
   getMyFriends(): Observable<Friend[]> {
     return this.httpClient.get<Friend[]>(`${this.apiUrl}/friend/my-friends`, { withCredentials: true });
   }
