@@ -8,28 +8,25 @@
     </div>
   </div>
 
-  <!-- Messages container -->
   <div class="messages" #messagesContainer>
     <ng-container *ngFor="let msg of messages">
       <div class="message-box" [class.own-message]="isOwnMessage(msg)">
         <div class="message-content">
-          <!-- DOSYA/RESİM/VİDEO MESAJI -->
           <div *ngIf="msg.type === MessageType.Image || msg.type === MessageType.File || msg.type === MessageType.Video">
             <!-- Resim mesajı -->
             <div *ngIf="msg.type === MessageType.Image" class="message-image">
               <img 
-                [src]="'https://localhost:7055' + msg.attachmentUrl" 
+                [src]="msg.attachmentUrl | attachFile:'url'" 
                 [alt]="msg.attachmentName || 'Resim'"
-                (click)="openImagePreview('https://localhost:7055' + msg.attachmentUrl)"
+                (click)="openImagePreview(msg.attachmentUrl)"
                 class="chat-image"
                 (error)="onImageError($event)">
               <p class="image-caption" *ngIf="msg.content !== msg.attachmentName">{{ msg.content }}</p>
             </div>
 
-            <!-- Video mesajı -->
             <div *ngIf="msg.type === MessageType.Video" class="message-video">
               <video 
-                [src]="'https://localhost:7055' + msg.attachmentUrl" 
+                [src]="msg.attachmentUrl | attachFile:'url'" 
                 controls
                 class="chat-video"
                 preload="metadata">
@@ -40,7 +37,7 @@
             
             <!-- Dosya mesajı -->
             <div *ngIf="msg.type === MessageType.File" class="message-file">
-              <a [href]="'https://localhost:7055' + msg.attachmentUrl" 
+              <a [href]="msg.attachmentUrl | attachFile:'url'" 
                  [download]="msg.attachmentName"
                  class="file-download-link">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -51,7 +48,7 @@
                 </svg>
                 <div class="file-info">
                   <span class="file-name">{{ msg.attachmentName }}</span>
-                  <span class="file-size">{{ formatFileSize(msg.attachmentSize) }}</span>
+                  <span class="file-size">{{ msg.attachmentSize | attachFile:'size' }}</span>
                 </div>
               </a>
             </div>

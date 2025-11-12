@@ -90,14 +90,14 @@
       transform: scale(0.95);
     }
 
-    .request-badge {
+    .request-count {
       position: absolute;
       top: -4px;
       right: -4px;
-      background: #25d366;
-      color: #111b21;
+      background: #ea4335; 
+      color: #ffffff; 
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       min-width: 18px;
       height: 18px;
       border-radius: 9px;
@@ -106,6 +106,8 @@
       justify-content: center;
       padding: 0 5px;
       z-index: 1;
+      border: 2px solid #202c33;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
   }
 
@@ -428,58 +430,53 @@
     .request-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
+      gap: 16px;
+      padding: 16px;
       background: #202c33;
-      border-radius: 8px;
+      border-radius: 12px;
       transition: all 0.2s ease;
+      border: 1px solid transparent;
 
       &:hover {
         background: #2a3942;
+        border-color: #374249;
       }
 
       .request-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #374249;
         flex-shrink: 0;
-
-        img {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          object-fit: cover;
-        }
       }
 
       .request-info {
         flex: 1;
         min-width: 0;
 
-        .request-name {
+        h4 {
+          margin: 0 0 4px;
           font-size: 16px;
           font-weight: 500;
           color: #e9edef;
-          margin-bottom: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .request-meta {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+        p {
+          margin: 0 0 4px;
           font-size: 13px;
           color: #8696a0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
 
-          .email {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .separator {
-            color: #667781;
-          }
-
-          .date {
-            white-space: nowrap;
-          }
+        small {
+          font-size: 12px;
+          color: #667781;
         }
       }
 
@@ -490,25 +487,30 @@
       }
 
       .accept-btn,
-      .decline-btn {
+      .reject-btn {
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
+        justify-content: center;
         border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
+        border-radius: 50%;
         cursor: pointer;
         transition: all 0.2s ease;
 
         svg {
-          stroke-width: 2;
+          width: 18px;
+          height: 18px;
+          stroke-width: 2.5;
         }
 
         &:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        &:active:not(:disabled) {
+          transform: scale(0.95);
         }
       }
 
@@ -518,17 +520,26 @@
 
         &:hover:not(:disabled) {
           background: #06cf9c;
+          transform: scale(1.05);
+        }
+
+        svg {
+          stroke: #111b21;
         }
       }
 
-      .decline-btn {
-        background: transparent;
+      .reject-btn {
+        background: #374249;
         color: #8696a0;
-        border: 1px solid #2a3942;
 
         &:hover:not(:disabled) {
-          background: #2a3942;
-          color: #d1d7db;
+          background: #ea4335;
+          color: white;
+          transform: scale(1.05);
+        }
+
+        svg {
+          stroke: currentColor;
         }
       }
     }
@@ -575,18 +586,29 @@
       .modal-content {
         width: 95%;
         max-height: 90vh;
+        margin: 0 10px;
       }
 
       .request-item {
-        flex-direction: column;
-        text-align: center;
+        padding: 12px;
+        gap: 12px;
 
-        .request-actions {
-          width: 100%;
-          flex-direction: column;
+        .request-avatar {
+          width: 48px;
+          height: 48px;
+        }
 
-          button {
-            width: 100%;
+        .request-info {
+          h4 {
+            font-size: 15px;
+          }
+
+          p {
+            font-size: 12px;
+          }
+
+          small {
+            font-size: 11px;
           }
         }
       }

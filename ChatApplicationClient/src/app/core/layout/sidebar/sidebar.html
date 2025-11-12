@@ -1,12 +1,5 @@
 <div class="sidebar">
-  <div class="profile-section">
-    <div class="avatar-row">
-      <div class="avatar-container">
-        <img [src]="currentUser?.avatar || 'assets/default-avatar.png'" alt="Profil" class="profile-avatar">
-      </div>
-    </div>
-    <h3>{{ currentUser?.name || 'Kullanıcı' }}</h3>
-  </div>
+
 
   <div class="sidebar-menu">
     <button class="menu-item" [class.active]="isActiveRoute('/chat')" (click)="navigateToChat()">

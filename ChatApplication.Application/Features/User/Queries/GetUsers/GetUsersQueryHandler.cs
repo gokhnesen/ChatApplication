@@ -1,3 +1,4 @@
+﻿using ChatApplication.Application.Interfaces.Friend;
 using ChatApplication.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -15,26 +16,43 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<GetUsersQueryHandler> _logger;
+        private readonly IFriendReadRepository _friendReadRepository;
 
         public GetUsersQueryHandler(
             UserManager<ApplicationUser> userManager,
-            ILogger<GetUsersQueryHandler> logger)
+            ILogger<GetUsersQueryHandler> logger,
+            IFriendReadRepository friendReadRepository)
         {
             _userManager = userManager;
             _logger = logger;
+            _friendReadRepository = friendReadRepository;
         }
 
         public async Task<List<GetUsersResponse>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
         {
             try
             {
-                _logger.LogInformation("Kullan?c?lar getiriliyor. SearchTerm: {SearchTerm}", request.SearchTerm);
+                _logger.LogInformation("Kullanicilar getiriliyor. SearchTerm: {SearchTerm}, ExcludeUserId: {ExcludeUserId}", 
+                    request.SearchTerm, request.ExcludeUserId);
 
                 var query = _userManager.Users.AsQueryable();
 
                 if (!string.IsNullOrWhiteSpace(request.ExcludeUserId))
                 {
                     query = query.Where(u => u.Id != request.ExcludeUserId);
+
+                    var blockedUserIds = await _friendReadRepository.GetAll(false)
+                        .Where(f => (f.SenderId == request.ExcludeUserId || f.ReceiverId == request.ExcludeUserId)
+                                    && f.Status == FriendStatus.Engellendi)
+                        .Select(f => f.SenderId == request.ExcludeUserId ? f.ReceiverId : f.SenderId)
+                        .ToListAsync(cancellationToken);
+
+                    _logger.LogInformation("Engellenen kullanıcı sayısı: {Count}", blockedUserIds.Count);
+
+                    if (blockedUserIds.Any())
+                    {
+                        query = query.Where(u => !blockedUserIds.Contains(u.Id));
+                    }
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -43,15 +61,14 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
                     query = query.Where(u =>
                         u.Name.StartsWith(searchTerm) ||
                         u.LastName.StartsWith(searchTerm) ||
-                        u.UserName.StartsWith(searchTerm) ||
-                        u.Email.StartsWith(searchTerm) ||
+                        (u.UserName != null && u.UserName.StartsWith(searchTerm)) ||
+                        (u.Email != null && u.Email.StartsWith(searchTerm)) ||
                         u.Name.Contains(searchTerm) ||
                         u.LastName.Contains(searchTerm) ||
-                        u.UserName.Contains(searchTerm) ||
-                        u.Email.Contains(searchTerm) ||
+                        (u.UserName != null && u.UserName.Contains(searchTerm)) ||
+                        (u.Email != null && u.Email.Contains(searchTerm)) ||
                         u.FriendCode.Contains(searchTerm)
                     );
-
                 }
 
                 if (request.PageNumber.HasValue && request.PageSize.HasValue)
@@ -69,7 +86,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
                     .ThenBy(u => u.LastName)
                     .ToListAsync(cancellationToken);
 
-                _logger.LogInformation("{Count} kullan?c? bulundu", users.Count);
+                _logger.LogInformation("Toplam {Count} kullanıcı bulundu", users.Count);
 
                 return users.Select(u => new GetUsersResponse
                 {
@@ -84,7 +101,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Kullan?c?lar? getirirken hata olu?tu");
+                _logger.LogError(ex, "Kullanıcıları getirirken hata oluştu");
                 return new List<GetUsersResponse>();
             }
         }
