@@ -10,11 +10,12 @@ import { Friend, PendingFriendRequest } from '../../shared/models/friend';
 import { Message, MessageType } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
+import { FriendRequest } from './friend-request/friend-request';
 
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ProfilePhotoPipe],
+  imports: [CommonModule, FormsModule, RouterModule, ProfilePhotoPipe, FriendRequest],
   templateUrl: './friends.html',
   styleUrls: ['./friends.scss']
 })
@@ -28,12 +29,12 @@ export class Friends implements OnInit, OnDestroy {
   currentUser: any = null;
   pendingRequestCount: number = 0;
   showFriendRequests: boolean = false;
-  MessageType = MessageType; // ✅ HTML'de kullanmak için
-  
+  MessageType = MessageType;
   pendingRequests: PendingFriendRequest[] = [];
   requestsLoading: boolean = false;
   requestsError: string | null = null;
-  private processingRequests = new Set<string>();
+  processingRequests = new Set<string>();
+  private notificationSound: HTMLAudioElement | null = null;
 
   private messageService = inject(MessageService);
   private userService = inject(UserService);
@@ -42,7 +43,6 @@ export class Friends implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private subscriptions: Subscription[] = [];
-
   private initialized = false;
   private pendingFriendId: string | null = null;
   private pendingRequestInterval: any;
@@ -52,6 +52,8 @@ export class Friends implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private friendService: FriendService
   ) {
+    this.initNotificationSound();
+    
     effect(() => {
       const user = this.userService.currentUser();
       if (user) {
@@ -60,6 +62,30 @@ export class Friends implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private initNotificationSound(): void {
+    try {
+      // Farklı yolları dene
+      const soundPath = 'assets/sounds/notify.mp3';
+      this.notificationSound = new Audio(soundPath);
+      this.notificationSound.preload = 'auto';
+      this.notificationSound.volume = 0.5;
+      
+      // Ses yüklendiğinde log
+      this.notificationSound.addEventListener('canplaythrough', () => {
+        console.log('✅ Bildirim sesi yüklendi');
+      }, { once: true });
+      
+      // Hata durumunda log
+      this.notificationSound.addEventListener('error', (e) => {
+        console.error('❌ Ses dosyası yüklenemedi:', e);
+        console.error('Denenen yol:', soundPath);
+      });
+      
+    } catch (error) {
+      console.error('❌ Audio nesnesi oluşturulamadı:', error);
+    }
   }
 
   ngOnInit(): void {
@@ -98,8 +124,14 @@ export class Friends implements OnInit, OnDestroy {
       );
     }
 
-    // Her 30 saniyede bir istek sayısını güncelle
     this.pendingRequestInterval = setInterval(() => this.loadPendingRequestCount(), 30000);
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.pendingRequestInterval) {
+      clearInterval(this.pendingRequestInterval);
+    }
   }
 
   loadPendingRequestCount(): void {
@@ -108,9 +140,7 @@ export class Friends implements OnInit, OnDestroy {
         this.pendingRequestCount = requests?.length || 0;
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Bekleyen istek sayısı alınamadı:', err);
-      }
+      error: () => {}
     });
   }
 
@@ -144,10 +174,6 @@ export class Friends implements OnInit, OnDestroy {
     });
   }
 
-  isProcessingRequest(friendshipId: string): boolean {
-    return this.processingRequests.has(friendshipId);
-  }
-
   respondToRequest(request: PendingFriendRequest, accept: boolean): void {
     const fid = request.friendshipId;
     if (this.processingRequests.has(fid)) return;
@@ -159,13 +185,12 @@ export class Friends implements OnInit, OnDestroy {
         this.processingRequests.delete(fid);
         this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== fid);
         this.pendingRequestCount = this.pendingRequests.length;
+        this.loadPendingRequestCount();
         
-        // Eğer kabul edildiyse arkadaş listesini yenile
         if (accept) {
           this.loadFriendsWithMessages();
         }
         
-        // Eğer tüm istekler işlendiyse modalı kapat
         if (this.pendingRequests.length === 0) {
           this.closeFriendRequests();
         }
@@ -180,13 +205,97 @@ export class Friends implements OnInit, OnDestroy {
     });
   }
 
-  trackByRequest(_: number, r: PendingFriendRequest): string {
-    return r.friendshipId;
+  selectFriend(friend: Friend): void {
+    this.selectedFriend = friend;
+    friend.unreadMessageCount = 0;
+    localStorage.setItem('lastSelectedFriendId', friend.id);
+    this.cdr.detectChanges();
+    this.router.navigate(['/chat', friend.id]);
   }
 
-  onAvatarError(evt: Event): void {
-    const img = evt.target as HTMLImageElement;
-    img.src = 'assets/default-avatar.png';
+  filterFriends(): void {
+    if (!this.searchText) {
+      this.filteredFriends = [...this.friends];
+      return;
+    }
+    const searchLower = this.searchText.toLowerCase();
+    this.filteredFriends = this.friends.filter(friend =>
+      friend.sender?.name?.toLowerCase().includes(searchLower) ||
+      friend.sender?.lastName?.toLowerCase().includes(searchLower) ||
+      friend.sender?.email?.toLowerCase().includes(searchLower) ||
+      friend.name?.toLowerCase().includes(searchLower) ||
+      friend.lastName?.toLowerCase().includes(searchLower) ||
+      friend.email?.toLowerCase().includes(searchLower)
+    );
+    this.cdr.detectChanges();
+  }
+
+  getLastMessage(friend: Friend): Message | null {
+    return this.friendMessages.get(friend.id) || null;
+  }
+
+  getLastMessagePreview(friend: Friend): string {
+    const message = this.getLastMessage(friend);
+    
+    if (!message || !message.hasMessage) {
+      return 'Henüz mesaj yok';
+    }
+
+    const isOwn = message.senderId === this.currentUserId;
+    const prefix = isOwn ? 'Sen: ' : '';
+
+    switch (message.type) {
+      case MessageType.Image:
+        return prefix + '📷 Fotoğraf';
+      case MessageType.Video:
+        return prefix + '📹 Video';
+      case MessageType.File:
+        return prefix + '📎 ' + (message.attachmentName || 'Dosya');
+      default:
+        const content = message.content.length > 30 
+          ? message.content.substring(0, 30) + '...' 
+          : message.content;
+        return prefix + content;
+    }
+  }
+
+  getLastMessageTime(friend: Friend): string {
+    const message = this.getLastMessage(friend);
+    
+    if (!message || !message.hasMessage) {
+      return '';
+    }
+
+    const date = new Date(message.sentAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Şimdi';
+    if (diffMins < 60) return `${diffMins}dk`;
+    if (diffHours < 24) return `${diffHours}sa`;
+    if (diffDays < 7) return `${diffDays}g`;
+    
+    return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+  }
+
+  isLastMessageUnread(friend: Friend): boolean {
+    const message = this.getLastMessage(friend);
+    return message ? !message.isRead && message.receiverId === this.currentUserId : false;
+  }
+
+  onFriendRequestRespond(event: {request: PendingFriendRequest, accept: boolean}): void {
+    this.respondToRequest(event.request, event.accept);
+  }
+
+  onFriendRequestClose(): void {
+    this.closeFriendRequests();
+  }
+
+  onFriendRequestRetry(): void {
+    this.loadPendingRequests();
   }
 
   private initAfterUser(): void {
@@ -196,24 +305,6 @@ export class Friends implements OnInit, OnDestroy {
     this.initializeListeners();
   }
 
-  ngOnDestroy(): void {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    
-    // Interval'ı temizle
-    if (this.pendingRequestInterval) {
-      clearInterval(this.pendingRequestInterval);
-    }
-  }
-
-  selectFriend(friend: Friend): void {
-    this.selectedFriend = friend;
-    friend.unreadMessageCount = 0;
-    // Son seçilen arkadaşı localStorage'a kaydet
-    localStorage.setItem('lastSelectedFriendId', friend.id);
-    this.cdr.detectChanges();
-    this.router.navigate(['/chat', friend.id]);
-  }
-
   private loadFriendsWithMessages(): void {
     this.subscriptions.push(
       this.friendService.getMyFriends().subscribe({
@@ -221,15 +312,12 @@ export class Friends implements OnInit, OnDestroy {
           this.friends = data;
           this.filteredFriends = [...this.friends];
           
-          // Pending friend ID varsa onu seç
           if (this.pendingFriendId) {
             const f = this.friends.find(x => x.id === this.pendingFriendId);
             if (f) {
               this.selectedFriend = f;
             }
-          } 
-          // Route'da ID yoksa ve chat sayfasındaysak son seçileni yükle
-          else if (this.router.url === '/chat' || this.router.url === '/') {
+          } else if (this.router.url === '/chat' || this.router.url === '/') {
             this.loadLastSelectedFriend();
           }
           
@@ -246,14 +334,11 @@ export class Friends implements OnInit, OnDestroy {
       const lastFriend = this.friends.find(f => f.id === lastFriendId);
       if (lastFriend) {
         this.selectedFriend = lastFriend;
-        // Route'a yönlendir
         this.router.navigate(['/chat', lastFriend.id]);
       } else {
-        // Son arkadaş listede yoksa ilk arkadaşı seç
         this.selectFirstFriend();
       }
     } else if (this.friends.length > 0) {
-      // Hiç seçim yoksa ilk arkadaşı seç
       this.selectFirstFriend();
     }
   }
@@ -299,7 +384,6 @@ export class Friends implements OnInit, OnDestroy {
   }
 
   private initializeListeners(): void {
-    // MessageBroadcastService dinle (ana kaynak)
     this.subscriptions.push(
       this.messageBroadcast.messageUpdate$.subscribe((update) => {
         this.ngZone.run(() => {
@@ -318,7 +402,6 @@ export class Friends implements OnInit, OnDestroy {
       })
     );
 
-    // ✅ GÜNCELLENECEK - 6 parametre al
     this.signalRService.onReceiveMessage((
       senderId: string, 
       content: string,
@@ -342,7 +425,6 @@ export class Friends implements OnInit, OnDestroy {
       });
     });
 
-    // ✅ GÜNCELLENECEK - 6 parametre al
     this.signalRService.onMessageSent((
       receiverId: string, 
       content: string,
@@ -374,7 +456,7 @@ export class Friends implements OnInit, OnDestroy {
     receiverId: string,
     sentAt: Date,
     isOwn: boolean,
-    type: MessageType = MessageType.Text, // ✅ TİP PARAMETRESİ EKLE
+    type: MessageType = MessageType.Text,
     attachmentUrl?: string | null,
     attachmentName?: string | null
   ): void {
@@ -389,20 +471,55 @@ export class Friends implements OnInit, OnDestroy {
       sentAt: sentAt,
       isRead: false,
       hasMessage: true,
-      type: type, // ✅ TİPİ EKLE
+      type: type,
       attachmentUrl: attachmentUrl,
       attachmentName: attachmentName
     };
 
     this.friendMessages.set(friend.id, newMessage);
 
-    // Eğer mesaj bize geliyorsa sayıyı artır
-    if (receiverId === this.currentUserId && !isOwn) {
+    // ✅ SADECE BAŞKASININ GÖNDERDİĞİ VE SIZE GELEN MESAJLARDA SES ÇAL
+    if (receiverId === this.currentUserId && senderId !== this.currentUserId) {
       friend.unreadMessageCount = (friend.unreadMessageCount || 0) + 1;
+      this.playNotificationSound();
+      console.log('🔔 Gelen mesaj için ses çalındı');
     }
 
     this.sortFriendsByLastMessage();
     this.updateView();
+  }
+
+  private playNotificationSound(): void {
+    if (!this.notificationSound) {
+      console.warn('⚠️ Bildirim sesi başlatılmamış');
+      return;
+    }
+
+    console.log('🔔 Bildirim sesi çalınıyor...');
+    
+    // Kullanıcı etkileşimi gerekebilir, bu yüzden promise kullan
+    const playPromise = this.notificationSound.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log('✅ Ses başarıyla çalındı');
+          // Ses çalındıktan sonra başa al
+          setTimeout(() => {
+            if (this.notificationSound) {
+              this.notificationSound.currentTime = 0;
+            }
+          }, 100);
+        })
+        .catch((error) => {
+          console.error('❌ Ses çalınamadı:', error);
+          
+          // Tarayıcı politikası hatası ise kullanıcıya bildir
+          if (error.name === 'NotAllowedError') {
+            console.warn('⚠️ Tarayıcı sesi otomatik çalmaya izin vermiyor. Kullanıcı etkileşimi gerekiyor.');
+          }
+        });
+    }
   }
 
   private sortFriendsByLastMessage(): void {
@@ -420,84 +537,5 @@ export class Friends implements OnInit, OnDestroy {
   private updateView(): void {
     this.filteredFriends = [...this.friends];
     this.cdr.detectChanges();
-  }
-
-  filterFriends(): void {
-    if (!this.searchText) {
-      this.filteredFriends = [...this.friends];
-      return;
-    }
-    const searchLower = this.searchText.toLowerCase();
-    this.filteredFriends = this.friends.filter(friend =>
-      friend.sender?.name?.toLowerCase().includes(searchLower) ||
-      friend.sender?.lastName?.toLowerCase().includes(searchLower) ||
-      friend.sender?.email?.toLowerCase().includes(searchLower) ||
-      friend.name?.toLowerCase().includes(searchLower) ||
-      friend.lastName?.toLowerCase().includes(searchLower) ||
-      friend.email?.toLowerCase().includes(searchLower)
-    );
-    this.cdr.detectChanges();
-  }
-
-  getLastMessage(friend: Friend): Message | null {
-    return this.friendMessages.get(friend.id) || null;
-  }
-
-  // ✅ YENİ FONKSİYON: Mesaj önizlemesini tip bazlı göster
-  getLastMessagePreview(friend: Friend): string {
-    const message = this.getLastMessage(friend);
-    
-    if (!message || !message.hasMessage) {
-      return 'Henüz mesaj yok';
-    }
-
-    const isOwn = message.senderId === this.currentUserId;
-    const prefix = isOwn ? 'Sen: ' : '';
-
-    // Mesaj tipine göre önizleme
-    switch (message.type) {
-      case MessageType.Image:
-        return prefix + '📷 Fotoğraf';
-      
-      case MessageType.Video:
-        return prefix + '📹 Video';
-      
-      case MessageType.File:
-        return prefix + '📎 ' + (message.attachmentName || 'Dosya');
-      
-      case MessageType.Text:
-      default:
-        const content = message.content.length > 30 
-          ? message.content.substring(0, 30) + '...' 
-          : message.content;
-        return prefix + content;
-    }
-  }
-
-  getLastMessageTime(friend: Friend): string {
-    const message = this.getLastMessage(friend);
-    
-    if (!message || !message.hasMessage) {
-      return '';
-    }
-
-    const date = new Date(message.sentAt);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Şimdi';
-    if (diffMins < 60) return `${diffMins}dk`;
-    if (diffHours < 24) return `${diffHours}sa`;
-    if (diffDays < 7) return `${diffDays}g`;
-    
-    return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
-  }
-
-  isLastMessageUnread(friend: Friend): boolean {
-    const message = this.getLastMessage(friend);
-    return message ? !message.isRead && message.receiverId === this.currentUserId : false;
   }
 }

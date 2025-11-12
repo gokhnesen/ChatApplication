@@ -10,6 +10,7 @@ import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { Subscription } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { PickerComponent } from '@ctrl/ngx-emoji-mart';
+import { AttachFilePipe } from "../../pipes/attach-file.pipe";
 
 @Component({
   selector: 'app-chat',
@@ -19,12 +20,14 @@ import { PickerComponent } from '@ctrl/ngx-emoji-mart';
     ReactiveFormsModule,
     CommonModule,
     ProfilePhotoPipe,
-    PickerComponent
-  ],
+    PickerComponent,
+    AttachFilePipe
+],
   templateUrl: './chat.html',
   styleUrls: ['./chat.scss']
 })
 export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
+  
   @Input() receiverUser: { id: string; name: string; lastName?: string; profilePhotoUrl?: string } = { 
     id: '', 
     name: 'Sohbet', 
@@ -36,18 +39,12 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   messages: Message[] = [];
   messageText: string = '';
   
-  // Yeni özellikler
   selectedFile: File | null = null;
   selectedFilePreview: string | null = null;
   isUploading: boolean = false;
   imagePreviewUrl: string | null = null;
   MessageType = MessageType;
   
-  currentUser = { 
-    id: '', 
-    name: '', 
-    avatar: 'assets/default-avatar.png' 
-  };
 
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
@@ -58,14 +55,12 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private hasMarkedAsRead = false;
   showEmojiPicker = false;
 
-  // Kamera özellikleri
   showCamera: boolean = false;
   cameraStream: MediaStream | null = null;
   capturedImage: string | null = null;
   @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
   
-  // Video kayıt özellikleri
   showVideoRecorder: boolean = false;
   isRecording: boolean = false;
   mediaRecorder: MediaRecorder | null = null;
@@ -73,12 +68,12 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   recordedVideoUrl: string | null = null;
   recordingDuration: number = 0;
   recordingTimer: any = null;
-  maxRecordingDuration: number = 60; // 60 saniye max
+  maxRecordingDuration: number = 60;
   videoStream: MediaStream | null = null;
   @ViewChild('videoPreviewElement') videoPreviewElement!: ElementRef<HTMLVideoElement>;
   @ViewChild('recordedVideoElement') recordedVideoElement!: ElementRef<HTMLVideoElement>;
+  currentUser: any;
   
-  // Emoji picker dışına tıklayınca kapat
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
@@ -633,7 +628,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  // Dosya ile mesaj gönder
   async sendMessageWithFile() {
     if (!this.selectedFile || !this.receiverUser.id || !this.currentUser.id) return;
 

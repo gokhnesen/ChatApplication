@@ -3,22 +3,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0b141a; // ✅ WhatsApp dark tema arka plan
   padding: 20px;
   position: relative;
   overflow: hidden;
 }
 
 .login-card {
-  background: white;
+  background: #202c33; // ✅ WhatsApp dark card rengi
   border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid #2a3942; // ✅ WhatsApp border
   width: 100%;
   max-width: 440px;
   padding: 48px 40px;
   position: relative;
   z-index: 1;
   animation: slideUp 0.5s ease;
+  margin: auto;
 }
 
 .login-header {
@@ -31,13 +33,15 @@
     justify-content: center;
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #00a884; // ✅ WhatsApp yeşil
     border-radius: 20px;
     margin-bottom: 24px;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 168, 132, 0.3);
 
     svg {
-      color: white;
+      color: #111b21; // ✅ Dark ikon rengi
+      width: 40px;
+      height: 40px;
     }
   }
 
@@ -45,13 +49,13 @@
     margin: 0 0 8px;
     font-size: 32px;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #e9edef; // ✅ WhatsApp text rengi
   }
 
   p {
     margin: 0;
     font-size: 16px;
-    color: #6b7280;
+    color: #8696a0; // ✅ WhatsApp secondary text
   }
 }
 
@@ -69,7 +73,7 @@
   label {
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: #e9edef; // ✅ WhatsApp text
   }
 
   .input-wrapper {
@@ -80,7 +84,7 @@
     .input-icon {
       position: absolute;
       left: 16px;
-      color: #9ca3af;
+      color: #8696a0; // ✅ WhatsApp icon rengi
       font-size: 16px;
       pointer-events: none;
     }
@@ -88,21 +92,22 @@
     input {
       width: 100%;
       padding: 14px 16px 14px 48px;
-      border: 2px solid #e5e7eb;
+      border: 2px solid #2a3942; // ✅ WhatsApp border
       border-radius: 12px;
       font-size: 15px;
       transition: all 0.3s ease;
-      background: #f9fafb;
+      background: #111b21; // ✅ WhatsApp input background
+      color: #e9edef; // ✅ WhatsApp text
 
       &:focus {
         outline: none;
-        border-color: #667eea;
-        background: white;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        border-color: #00a884; // ✅ WhatsApp yeşil focus
+        background: #1a2529;
+        box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.1);
       }
 
       &::placeholder {
-        color: #9ca3af;
+        color: #667781; // ✅ WhatsApp placeholder
       }
 
       &:disabled {
@@ -116,7 +121,7 @@
       right: 16px;
       background: none;
       border: none;
-      color: #9ca3af;
+      color: #8696a0; // ✅ WhatsApp icon
       cursor: pointer;
       padding: 4px;
       display: flex;
@@ -125,7 +130,7 @@
       transition: color 0.2s ease;
 
       &:hover:not(:disabled) {
-        color: #667eea;
+        color: #00a884; // ✅ WhatsApp yeşil hover
       }
 
       &:disabled {
@@ -145,10 +150,10 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
+  background: rgba(234, 67, 53, 0.15); // ✅ Dark tema hata background
+  border: 1px solid rgba(234, 67, 53, 0.3);
   border-radius: 10px;
-  color: #dc2626;
+  color: #ff6b6b; // ✅ Soft kırmızı
   font-size: 14px;
   animation: shake 0.4s ease;
 
@@ -160,8 +165,8 @@
 .login-btn {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #00a884; // ✅ WhatsApp yeşil
+  color: #111b21; // ✅ Dark text
   border: none;
   border-radius: 12px;
   font-size: 16px;
@@ -171,12 +176,14 @@
   margin-top: 8px;
 
   &:hover:not(:disabled) {
+    background: #06cf9c; // ✅ Daha açık yeşil hover
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 12px 24px rgba(0, 168, 132, 0.3);
   }
 
   &:active:not(:disabled) {
     transform: translateY(0);
+    background: #008f6d; // ✅ Daha koyu yeşil active
   }
 
   &:disabled {
@@ -203,13 +210,13 @@
   p {
     margin: 0;
     font-size: 14px;
-    color: #6b7280;
+    color: #8696a0; // ✅ WhatsApp secondary text
   }
 
   .register-link {
-    background: none;
-    border: 2px solid #667eea;
-    color: #667eea;
+    background: transparent;
+    border: 2px solid #00a884; // ✅ WhatsApp yeşil border
+    color: #00a884; // ✅ WhatsApp yeşil text
     padding: 12px 24px;
     border-radius: 10px;
     font-size: 15px;
@@ -218,14 +225,15 @@
     transition: all 0.3s ease;
 
     &:hover {
-      background: #667eea;
-      color: white;
+      background: #00a884; // ✅ WhatsApp yeşil background
+      color: #111b21; // ✅ Dark text
       transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 16px rgba(0, 168, 132, 0.3);
     }
 
     &:active {
       transform: translateY(0);
+      background: #008f6d;
     }
   }
 }
@@ -242,8 +250,8 @@
   .circle {
     position: absolute;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
+    background: rgba(0, 168, 132, 0.08); // ✅ WhatsApp yeşil şeffaf
+    backdrop-filter: blur(40px);
   }
 
   .circle-1 {
@@ -299,9 +307,15 @@
 
 // Responsive
 @media (max-width: 768px) {
+  .login-container {
+    padding: 16px;
+  }
+
   .login-card {
     padding: 32px 24px;
     border-radius: 20px;
+    max-width: 100%;
+    margin: auto;
   }
 
   .login-header {
@@ -341,5 +355,30 @@
     .circle-3 {
       display: none;
     }
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+  }
+
+  .form-group {
+    .input-wrapper {
+      input {
+        padding: 12px 14px 12px 44px;
+        font-size: 14px;
+      }
+
+      .input-icon {
+        left: 14px;
+        font-size: 14px;
+      }
+    }
+  }
+
+  .login-btn {
+    padding: 14px;
+    font-size: 15px;
   }
 }

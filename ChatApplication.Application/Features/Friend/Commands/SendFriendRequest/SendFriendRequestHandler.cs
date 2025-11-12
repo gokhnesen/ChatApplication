@@ -99,6 +99,29 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
                     };
                 }
 
+                // Engelleme kontrolü
+                var isBlocked = await _friendReadRepository.IsBlockedAsync(receiver.Id, request.SenderId);
+                if (isBlocked)
+                {
+                    return new SendFriendRequestResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Bu kullanıcıya arkadaşlık isteği gönderemezsiniz.",
+                        Errors = new List<string> { "User is blocked" }
+                    };
+                }
+
+                var hasBlockedYou = await _friendReadRepository.IsBlockedAsync(request.SenderId, receiver.Id);
+                if (hasBlockedYou)
+                {
+                    return new SendFriendRequestResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Bu kullanıcıya arkadaşlık isteği gönderemezsiniz.",
+                        Errors = new List<string> { "You have blocked this user" }
+                    };
+                }
+
                 var friendship = new Domain.Entities.Friend
                 {
                     SenderId = request.SenderId,

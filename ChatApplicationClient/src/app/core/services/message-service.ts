@@ -1,7 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
-import { Message, MessageUpdate } from '../shared/models/message';
+import { Message, MessageUpdate, MessageType } from '../shared/models/message';
+
+export interface MediaFile {
+  file: File;
+  preview: string | null;
+  type: MessageType;
+  size: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -45,5 +52,103 @@ export class MessageService {
     formData.append('file', file);
     
     return this.httpClient.post<any>(`${this.apiUrl}/message/upload-attachment`, formData);
+  }
+
+  // ✅ Dosya tipini belirle
+  getFileType(file: File): MessageType {
+    if (file.type.startsWith('image/')) return MessageType.Image;
+    if (file.type.startsWith('video/')) return MessageType.Video;
+    return MessageType.File;
+  }
+
+  // ✅ Dosya önizlemesi oluştur
+  createFilePreview(file: File): Observable<string> {
+    return new Observable(observer => {
+      const reader = new FileReader();
+      
+      reader.onload = (e: any) => {
+        observer.next(e.target.result);
+        observer.complete();
+      };
+      
+      reader.onerror = (error) => {
+        observer.error(error);
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ✅ Dosya boyutu doğrula
+  validateFileSize(file: File, maxSizeMB: number = 10): { valid: boolean; error?: string } {
+    const maxSize = maxSizeMB * 1024 * 1024;
+    
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `Dosya boyutu ${maxSizeMB}MB'dan büyük olamaz!`
+      };
+    }
+    
+    return { valid: true };
+  }
+
+  // ✅ Kameradan fotoğraf çek
+  capturePhotoFromCamera(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const context = canvasElement.getContext('2d');
+      if (!context) {
+        reject(new Error('Canvas context alınamadı'));
+        return;
+      }
+
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
+      context.drawImage(videoElement, 0, 0);
+
+      canvasElement.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          resolve(file);
+        } else {
+          reject(new Error('Blob oluşturulamadı'));
+        }
+      }, 'image/jpeg', 0.9);
+    });
+  }
+
+  // ✅ Video kaydı oluştur
+  createVideoFromBlob(chunks: Blob[]): File {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    return new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
+  }
+
+  // ✅ Medya yükle ve mesaj gönder
+  async uploadAndSendMedia(
+    file: File,
+    senderId: string,
+    receiverId: string,
+    caption?: string
+  ): Promise<any> {
+    // Dosyayı yükle
+    const uploadResult = await this.uploadFile(file).toPromise();
+    
+    if (!uploadResult || !uploadResult.isSuccess) {
+      throw new Error(uploadResult?.message || 'Dosya yüklenemedi');
+    }
+
+    // Mesaj komutunu hazırla
+    const messageCommand = {
+      senderId,
+      receiverId,
+      content: caption || uploadResult.attachmentName,
+      type: uploadResult.type,
+      attachmentUrl: uploadResult.attachmentUrl,
+      attachmentName: uploadResult.attachmentName,
+      attachmentSize: uploadResult.attachmentSize
+    };
+
+    // Mesajı gönder
+    return await this.sendMessage(messageCommand).toPromise();
   }
 }

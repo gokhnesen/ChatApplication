@@ -11,6 +11,10 @@ namespace ChatApplication.Application.Interfaces.Friend
         Task<List<Domain.Entities.Friend>> GetFriendsAsync(string userId);
         Task<List<Domain.Entities.Friend>> GetPendingRequestsAsync(string userId);
         Task<Domain.Entities.Friend> GetFriendRequestAsync(string senderId, string receiverId);
-    
+
+        Task<bool> IsBlockedAsync(string userId, string targetUserId);
+        Task<List<Domain.Entities.Friend>> GetBlockedUsersAsync(string userId);
+
     }
 }
+

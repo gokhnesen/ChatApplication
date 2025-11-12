@@ -25,7 +25,7 @@
     <input [(ngModel)]="lastName" name="lastName" type="text" placeholder="Soyad" required />
   </div>
 
-    <div class="form-group">
+  <div class="form-group">
     <input [(ngModel)]="userName" name="userName" type="text" placeholder="Kullanıcı Adı" required />
   </div>
 
@@ -41,6 +41,9 @@
     <span *ngIf="!isUploading">Kayıt Ol</span>
     <span *ngIf="isUploading">Kaydediliyor...</span>
   </button>
+  
+  <!-- ✅ Başarı mesajı -->
+  <div *ngIf="successMessage" class="success">{{ successMessage }}</div>
   
   <div *ngIf="error" class="error">{{ error }}</div>
 </form>

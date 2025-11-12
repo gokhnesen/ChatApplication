@@ -40,5 +40,20 @@ namespace ChatApplication.Persistence.Repositories.Friend
                     (f.SenderId == senderId && f.ReceiverId == receiverId) ||
                     (f.SenderId == receiverId && f.ReceiverId == senderId));
         }
+        public async Task<bool> IsBlockedAsync(string userId, string targetUserId)
+        {
+            return await Table.AnyAsync(f =>
+                f.SenderId == userId &&
+                f.ReceiverId == targetUserId &&
+                f.Status == FriendStatus.Engellendi);
+        }
+
+        public async Task<List<Domain.Entities.Friend>> GetBlockedUsersAsync(string userId)
+        {
+            return await Table
+                .Where(f => f.SenderId == userId && f.Status == FriendStatus.Engellendi)
+                .Include(f => f.Receiver)
+                .ToListAsync();
+        }
     }
 }

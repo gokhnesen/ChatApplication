@@ -20,7 +20,7 @@ namespace ChatApplicationAPI.API.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IWebHostEnvironment _environment;
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
-        private const long MaxFileSize = 5 * 1024 * 1024; // 5 MB
+        private const long MaxFileSize = 5 * 1024 * 1024; 
 
         public UserController(SignInManager<ApplicationUser> signInManager, IWebHostEnvironment environment)
         {
@@ -150,6 +150,12 @@ namespace ChatApplicationAPI.API.Controllers
             [FromQuery] int? pageNumber = null,
             [FromQuery] int? pageSize = null)
         {
+            // Eğer excludeUserId gönderilmemişse, mevcut kullanıcıyı kullan
+            if (string.IsNullOrEmpty(excludeUserId) && User.Identity?.IsAuthenticated == true)
+            {
+                excludeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            }
+
             var query = new GetUsersQuery
             {
                 SearchTerm = searchTerm,

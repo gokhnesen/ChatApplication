@@ -21,6 +21,7 @@ export class Register {
   selectedPhoto: File | null = null;
   photoPreviewUrl: string | null = null;
   isUploading: boolean = false;
+  successMessage: string = ''; // ✅ Başarı mesajı için
   
   private userService = inject(UserService);
   private router = inject(Router);
@@ -82,14 +83,13 @@ export class Register {
         next: (res: any) => {
           this.isUploading = false;
           if (res.isSuccess) {
-            localStorage.setItem('isAuthenticated', 'true');
-            // Store any tokens or user info
-            if (res.token) {
-              localStorage.setItem('token', res.token);
-            }
+            // ✅ Başarı mesajı göster
+            this.successMessage = 'Kayıt işlemi başarılı! Giriş sayfasına yönlendiriliyorsunuz...';
             
-            // Navigate to dashboard/home
-            this.router.navigate(['/dashboard']);
+            // ✅ 2 saniye sonra login sayfasına yönlendir
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 2000);
           } else {
             localStorage.setItem('isAuthenticated', 'false');
             this.error = res.message || 'Kayıt başarısız!';
