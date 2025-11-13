@@ -5,8 +5,6 @@ import { UserService } from './user-service';
 import { Friend, PendingFriendRequest } from '../shared/models/friend';
 import { environment } from '../../../environments/environment';
 
-
-
 @Injectable({
   providedIn: 'root'
 })
@@ -14,7 +12,7 @@ export class FriendService {
   private apiUrl = environment.apiUrl;
   private httpClient = inject(HttpClient);
   private userService = inject(UserService);
-
+  
   respondToFriendRequest(command: any): Observable<any> {
     return this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, command, { withCredentials: true });
   }
@@ -55,5 +53,15 @@ export class FriendService {
 
     if (me?.id) return post(me.id);
     return this.userService.getUserInfo().pipe(switchMap(u => post(u.id)));
+  }
+
+  // ✅ YENİ: Arkadaşı sil
+  removeFriend(friendId: string): Observable<any> {
+    return this.httpClient.delete<any>(`${this.apiUrl}/friend/remove/${friendId}`, { withCredentials: true });
+  }
+
+  // ✅ YENİ: Kullanıcıyı engelle
+  blockUser(blockerdId: string,blockedUserId: string): Observable<any> {
+    return this.httpClient.post<any>(`${this.apiUrl}/friend/block`, { blockerdId, blockedUserId }, { withCredentials: true });
   }
 }

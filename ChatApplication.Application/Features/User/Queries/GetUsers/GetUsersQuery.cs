@@ -9,5 +9,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
         public string? ExcludeUserId { get; set; }
         public int? PageNumber { get; set; }
         public int? PageSize { get; set; }
+        public bool? IncludeBlocked { get; set; }
+        public bool OnlyBlocked { get; set; } = false; 
     }
 }

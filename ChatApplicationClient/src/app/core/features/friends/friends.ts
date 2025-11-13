@@ -477,8 +477,6 @@ export class Friends implements OnInit, OnDestroy {
     };
 
     this.friendMessages.set(friend.id, newMessage);
-
-    // ✅ SADECE BAŞKASININ GÖNDERDİĞİ VE SIZE GELEN MESAJLARDA SES ÇAL
     if (receiverId === this.currentUserId && senderId !== this.currentUserId) {
       friend.unreadMessageCount = (friend.unreadMessageCount || 0) + 1;
       this.playNotificationSound();

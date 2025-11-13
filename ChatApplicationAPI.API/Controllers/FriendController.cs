@@ -2,6 +2,7 @@ using ChatApplication.Application.Features.Friend.Commands.BlockFriend;
 using ChatApplication.Application.Features.Friend.Commands.RemoveFriend;
 using ChatApplication.Application.Features.Friend.Commands.RespondToFriendRequest;
 using ChatApplication.Application.Features.Friend.Commands.SendFriendRequest;
+using ChatApplication.Application.Features.Friend.Commands.UnBlockFriend;
 using ChatApplication.Application.Features.Friend.Queries.GetFriends;
 using ChatApplication.Application.Features.Friend.Queries.GetPendingRequests;
 using Microsoft.AspNetCore.Mvc;
@@ -171,6 +172,37 @@ namespace ChatApplicationAPI.API.Controllers
 
         [HttpPost("block")]
         public async Task<IActionResult> BlockUser([FromBody] BlockFriendOrUserCommand command)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new
+                    {
+                        IsSuccess = false,
+                        Message = "Kullan?c? giri?i yap?lmam??."
+                    });
+                }
+
+                command.BlockerId = userId;
+
+                var response = await Mediator.Send(command);
+                return response.IsSuccess ? Ok(response) : BadRequest(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = "Sunucu hatas? olu?tu.",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+        }
+
+        [HttpPost("unblock")]
+        public async Task<IActionResult> UnblockUser([FromBody] UnBlockFriendOrUserCommand command)
         {
             try
             {
