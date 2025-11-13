@@ -148,9 +148,10 @@ namespace ChatApplicationAPI.API.Controllers
             [FromQuery] string? searchTerm = null,
             [FromQuery] string? excludeUserId = null,
             [FromQuery] int? pageNumber = null,
-            [FromQuery] int? pageSize = null)
+            [FromQuery] int? pageSize = null,
+            [FromQuery] bool? includeBlocked = null,
+            [FromQuery] bool onlyBlocked = false)
         {
-            // Eğer excludeUserId gönderilmemişse, mevcut kullanıcıyı kullan
             if (string.IsNullOrEmpty(excludeUserId) && User.Identity?.IsAuthenticated == true)
             {
                 excludeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -161,7 +162,9 @@ namespace ChatApplicationAPI.API.Controllers
                 SearchTerm = searchTerm,
                 ExcludeUserId = excludeUserId,
                 PageNumber = pageNumber,
-                PageSize = pageSize
+                PageSize = pageSize,
+                IncludeBlocked = includeBlocked,
+                OnlyBlocked = onlyBlocked
             };
 
             var response = await Mediator.Send(query);

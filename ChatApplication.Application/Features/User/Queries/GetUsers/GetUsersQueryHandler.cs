@@ -32,8 +32,8 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
         {
             try
             {
-                _logger.LogInformation("Kullanicilar getiriliyor. SearchTerm: {SearchTerm}, ExcludeUserId: {ExcludeUserId}", 
-                    request.SearchTerm, request.ExcludeUserId);
+                _logger.LogInformation("Kullanicilar getiriliyor. SearchTerm: {SearchTerm}, ExcludeUserId: {ExcludeUserId}, OnlyBlocked: {OnlyBlocked}",
+                    request.SearchTerm, request.ExcludeUserId, request.OnlyBlocked);
 
                 var query = _userManager.Users.AsQueryable();
 
@@ -49,10 +49,33 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
 
                     _logger.LogInformation("Engellenen kullanıcı sayısı: {Count}", blockedUserIds.Count);
 
-                    if (blockedUserIds.Any())
+                    // OnlyBlocked true ise sadece engellenenleri getir
+                    if (request.OnlyBlocked)
                     {
-                        query = query.Where(u => !blockedUserIds.Contains(u.Id));
+                        if (blockedUserIds.Any())
+                        {
+                            query = query.Where(u => blockedUserIds.Contains(u.Id));
+                        }
+                        else
+                        {
+                            // Hiç engellenen yoksa boş liste döndür
+                            return new List<GetUsersResponse>();
+                        }
                     }
+                    // IncludeBlocked false ise veya null ise, engellenenleri çıkar (varsayılan davranış)
+                    else if (request.IncludeBlocked != true)
+                    {
+                        if (blockedUserIds.Any())
+                        {
+                            query = query.Where(u => !blockedUserIds.Contains(u.Id));
+                        }
+                    }
+                }
+                else if (request.OnlyBlocked)
+                {
+                    // ExcludeUserId yoksa ve OnlyBlocked true ise boş liste döndür
+                    _logger.LogWarning("OnlyBlocked true ancak ExcludeUserId belirtilmemiş");
+                    return new List<GetUsersResponse>();
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -75,7 +98,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
                 {
                     var pageNumber = Math.Max(1, request.PageNumber.Value);
                     var pageSize = Math.Max(1, Math.Min(100, request.PageSize.Value));
-                    
+
                     query = query
                         .Skip((pageNumber - 1) * pageSize)
                         .Take(pageSize);

@@ -2,19 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { Message, MessageUpdate, MessageType } from '../shared/models/message';
+import { environment } from '../../../environments/environment';
 
-export interface MediaFile {
-  file: File;
-  preview: string | null;
-  type: MessageType;
-  size: number;
-}
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class MessageService {
-  private apiUrl = 'https://localhost:7055/api';
+  private apiUrl = environment.apiUrl;
   private httpClient = inject(HttpClient);
   private messageUpdateSubject = new Subject<MessageUpdate>();
 

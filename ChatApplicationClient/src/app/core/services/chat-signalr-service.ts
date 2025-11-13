@@ -77,7 +77,6 @@ export class ChatSignalrService {
     return Promise.resolve();
   }
 
-  // ✅ GÜNCELLENECEK - Attachment bilgilerini gönder
   sendMessage(
     receiverId: string, 
     content: string,

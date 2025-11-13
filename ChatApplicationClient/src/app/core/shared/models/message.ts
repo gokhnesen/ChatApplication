@@ -8,7 +8,6 @@ export interface Message {
   readAt?: Date;
   hasMessage?: boolean;
   
-  // Yeni alanlar
   type: MessageType;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
