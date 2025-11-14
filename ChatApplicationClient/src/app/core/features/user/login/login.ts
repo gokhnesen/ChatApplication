@@ -48,6 +48,14 @@ export class Login {
     });
   }
 
+  loginWithGoogle() {
+    this.userService.loginWithGoogle();
+  }
+
+  loginWithMicrosoft() {
+    this.userService.loginWithMicrosoft();
+  }
+
   togglePasswordVisibility() {
     this.showPassword = !this.showPassword;
   }

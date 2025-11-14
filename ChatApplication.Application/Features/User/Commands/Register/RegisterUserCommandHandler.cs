@@ -22,25 +22,7 @@ namespace ChatApplication.Application.Features.User.Commands.Register
             _logger = logger;
         }
 
-        private async Task<string> GenerateUniqueFriendCodeAsync()
-        {
-            Random random = new Random();
-            string friendCode;
-            bool isUnique = false;
 
-            do
-            {
-                friendCode = random.Next(10000, 100000).ToString();
-
-                var existingUser = await _userManager.Users
-                    .FirstOrDefaultAsync(u => u.FriendCode == friendCode);
-
-                isUnique = existingUser == null;
-
-            } while (!isUnique);
-
-            return friendCode;
-        }
 
         public async Task<RegisterUserCommandResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
         {
@@ -127,6 +109,26 @@ namespace ChatApplication.Application.Features.User.Commands.Register
                     Errors = new List<string> { ex.Message }
                 };
             }
+        }
+
+        private async Task<string> GenerateUniqueFriendCodeAsync()
+        {
+            Random random = new Random();
+            string friendCode;
+            bool isUnique = false;
+
+            do
+            {
+                friendCode = random.Next(10000, 100000).ToString();
+
+                var existingUser = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.FriendCode == friendCode);
+
+                isUnique = existingUser == null;
+
+            } while (!isUnique);
+
+            return friendCode;
         }
     }
 }

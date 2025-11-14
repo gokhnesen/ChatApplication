@@ -1,0 +1,737 @@
+.settings-container {
+  height: 100vh;
+  background: #111b21;
+  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #374249;
+    border-radius: 3px;
+
+    &:hover {
+      background: #3e4a52;
+    }
+  }
+
+  .settings-header {
+    padding: 1.5rem 2rem;
+    background: #202c33;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #2a3942;
+    flex-shrink: 0;
+
+    h1 {
+      margin: 0;
+      color: #e9edef;
+      font-size: 1.8rem;
+      font-weight: 500;
+    }
+  }
+
+  .settings-content {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .settings-section {
+    background: #202c33;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid #2a3942;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+    h2 {
+      margin: 0 0 1.5rem 0;
+      color: #e9edef;
+      font-size: 1.3rem;
+      font-weight: 500;
+    }
+  }
+
+  // Profil Bilgileri
+  .profile-info {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .profile-photo-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+
+      .profile-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #00a884;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .change-photo-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.2rem;
+        background: #00a884;
+        color: #111b21;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        svg {
+          stroke: #111b21;
+        }
+
+        &:hover:not(:disabled) {
+          background: #06cf9c;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .profile-details {
+      flex: 1;
+
+      @media (max-width: 768px) {
+        width: 100%;
+      }
+
+      .detail-row {
+        margin-bottom: 1.2rem;
+
+        label {
+          display: block;
+          color: #8696a0;
+          font-size: 0.9rem;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+        }
+
+        span {
+          color: #e9edef;
+          font-size: 1rem;
+        }
+
+        .friend-code-row {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+
+          .friend-code {
+            font-family: 'Courier New', monospace;
+            background: #111b21;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            color: #00a884;
+            font-weight: 600;
+            border: 1px solid #2a3942;
+            letter-spacing: 1px;
+          }
+
+          .copy-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: #2a3942;
+            color: #e9edef;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+
+            svg {
+              stroke: #e9edef;
+            }
+
+            &:hover {
+              background: #374249;
+              transform: translateY(-2px);
+            }
+
+            &:active {
+              transform: translateY(0);
+            }
+          }
+        }
+      }
+
+      .edit-form {
+        .form-group {
+          margin-bottom: 1.2rem;
+
+          label {
+            display: block;
+            color: #8696a0;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+          }
+
+          .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: #111b21;
+            border: 1px solid #2a3942;
+            border-radius: 8px;
+            color: #e9edef;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+
+            &:focus {
+              outline: none;
+              border-color: #00a884;
+              background: #0f1419;
+            }
+
+            &::placeholder {
+              color: #667781;
+            }
+          }
+        }
+      }
+
+      .profile-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+
+        button {
+          padding: 0.8rem 1.5rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.95rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
+
+        .edit-btn {
+          background: #00a884;
+          color: #111b21;
+
+          &:hover {
+            background: #06cf9c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+          }
+        }
+
+        .save-btn {
+          background: #00a884;
+          color: #111b21;
+
+          &:hover {
+            background: #06cf9c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+          }
+        }
+
+        .cancel-btn {
+          background: #2a3942;
+          color: #e9edef;
+
+          &:hover {
+            background: #374249;
+          }
+        }
+      }
+    }
+  }
+
+  // Engellenen Kullanıcılar
+  .blocked-users-list {
+    .blocked-user {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: #111b21;
+      border-radius: 8px;
+      margin-bottom: 0.8rem;
+      border: 1px solid #2a3942;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #1a2329;
+        border-color: #374249;
+      }
+
+      .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #374249;
+        flex-shrink: 0;
+      }
+
+      .user-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        .user-name {
+          color: #e9edef;
+          font-weight: 500;
+          font-size: 1rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .user-email {
+          color: #8696a0;
+          font-size: 0.85rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .unblock-btn {
+        padding: 0.6rem 1.2rem;
+        background: #ea4335;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+
+        &:hover {
+          background: #d33426;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: #8696a0;
+
+      svg {
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+        stroke: #8696a0;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1rem;
+        color: #8696a0;
+      }
+    }
+  }
+
+  // ✅ YENİ: Section header with add button
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      margin: 0;
+      color: #e9edef;
+      font-size: 1.3rem;
+      font-weight: 500;
+    }
+
+    .add-block-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: #00a884;
+      color: #111b21;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      svg {
+        stroke: #111b21;
+      }
+
+      &:hover {
+        background: #06cf9c;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 4rem 1rem;
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #2a3942;
+      border-top-color: #00a884;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+
+    p {
+      color: #8696a0;
+      margin: 0;
+      font-size: 1rem;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-container {
+    .settings-content {
+      padding: 1rem;
+    }
+
+    .settings-section {
+      padding: 1.5rem;
+    }
+
+    .profile-info {
+      flex-direction: column;
+      align-items: center !important;
+
+      .profile-details {
+        width: 100%;
+      }
+    }
+
+    .blocked-user {
+      .user-info {
+        .user-name,
+        .user-email {
+          font-size: 0.9rem !important;
+        }
+      }
+
+      .unblock-btn {
+        padding: 0.5rem 1rem !important;
+        font-size: 0.85rem !important;
+      }
+    }
+  }
+}
+
+// ✅ YENİ: Add Block Modal
+.add-block-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+
+  .modal-content {
+    background: #202c33;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #2a3942;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #2a3942;
+
+    h3 {
+      margin: 0;
+      color: #e9edef;
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    .close-modal-btn {
+      background: transparent;
+      border: none;
+      color: #8696a0;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #2a3942;
+        color: #e9edef;
+      }
+    }
+  }
+
+  .modal-search {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #2a3942;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #111b21;
+
+    svg {
+      stroke: #8696a0;
+      flex-shrink: 0;
+    }
+
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #e9edef;
+      font-size: 0.95rem;
+      outline: none;
+
+      &::placeholder {
+        color: #667781;
+      }
+    }
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #374249;
+      border-radius: 3px;
+
+      &:hover {
+        background: #3e4a52;
+      }
+    }
+
+    .friends-list {
+      .friend-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #111b21;
+        border-radius: 8px;
+        margin-bottom: 0.8rem;
+        border: 1px solid #2a3942;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #1a2329;
+          border-color: #374249;
+        }
+
+        .friend-avatar {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #374249;
+          flex-shrink: 0;
+        }
+
+        .friend-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+
+          .friend-name {
+            color: #e9edef;
+            font-weight: 500;
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .friend-email {
+            color: #8696a0;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .block-friend-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.6rem 1rem;
+          background: #ea4335;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.85rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+          white-space: nowrap;
+
+          svg {
+            stroke: #fff;
+          }
+
+          &:hover {
+            background: #d33426;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
+      }
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 3rem 1rem;
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #2a3942;
+        border-top-color: #00a884;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+      }
+
+      p {
+        color: #8696a0;
+        margin: 0;
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #8696a0;
+
+      svg {
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+        stroke: #8696a0;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1rem;
+        color: #8696a0;
+      }
+    }
+  }
+}
