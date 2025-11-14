@@ -53,7 +53,6 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
                     };
                 }
 
-                // Sadece engelleyen kişi (SenderId) engeli kaldırabilir
                 if (friendship.SenderId != request.BlockerId)
                 {
                     return new UnBlockFriendOrUserResponse

@@ -63,6 +63,87 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+
+  // ✅ YENİ: Ayırıcı çizgi
+  .divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    span {
+      padding: 0 1rem;
+      font-weight: 500;
+    }
+  }
+
+  // ✅ YENİ: Harici giriş butonları
+  .external-logins {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+
+      svg {
+        flex-shrink: 0;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+
+    .google-btn {
+      &:hover {
+        background: rgba(66, 133, 244, 0.1);
+        border-color: rgba(66, 133, 244, 0.3);
+      }
+    }
+
+    .microsoft-btn {
+      &:hover {
+        background: rgba(0, 120, 212, 0.1);
+        border-color: rgba(0, 120, 212, 0.3);
+      }
+    }
+  }
 }
 
 .form-group {

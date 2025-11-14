@@ -6,6 +6,7 @@ import { authGuard } from './core/guards/auth-guard';
 import { Main } from './core/layout/main/main';
 import { AddFriends } from './core/features/add-friends/add-friends';
 import { EditUser } from './core/features/edit-user/edit-user';
+import { Settings } from './core/features/settings/settings';
 
 export const routes: Routes = [
     { path: 'login', component: Login },
@@ -52,6 +53,17 @@ export const routes: Routes = [
             {
                 path: '',
                 component: EditUser
+            }
+        ]
+    },
+    {
+        path: 'settings',
+        component: Main,
+        canActivate: [authGuard],
+        children: [
+            {
+                path: '',
+                component: Settings
             }
         ]
     },

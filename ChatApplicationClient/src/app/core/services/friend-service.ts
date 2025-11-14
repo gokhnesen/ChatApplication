@@ -55,13 +55,15 @@ export class FriendService {
     return this.userService.getUserInfo().pipe(switchMap(u => post(u.id)));
   }
 
-  // ✅ YENİ: Arkadaşı sil
   removeFriend(friendId: string): Observable<any> {
     return this.httpClient.delete<any>(`${this.apiUrl}/friend/remove/${friendId}`, { withCredentials: true });
   }
 
-  // ✅ YENİ: Kullanıcıyı engelle
-  blockUser(blockerdId: string,blockedUserId: string): Observable<any> {
+  blockUser(blockerdId: string, blockedUserId: string): Observable<any> {
     return this.httpClient.post<any>(`${this.apiUrl}/friend/block`, { blockerdId, blockedUserId }, { withCredentials: true });
+  }
+
+  unblockUser(blockedUserId: string): Observable<any> {
+    return this.httpClient.post<any>(`${this.apiUrl}/Friend/unblock`, { blockedUserId }, { withCredentials: true });
   }
 }

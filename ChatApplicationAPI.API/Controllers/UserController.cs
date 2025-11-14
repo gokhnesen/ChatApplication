@@ -2,14 +2,18 @@
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.IO;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ChatApplicationAPI.API.Controllers
 {
@@ -19,16 +23,23 @@ namespace ChatApplicationAPI.API.Controllers
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IWebHostEnvironment _environment;
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
-        private const long MaxFileSize = 5 * 1024 * 1024; 
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public UserController(SignInManager<ApplicationUser> signInManager, IWebHostEnvironment environment)
+        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+        private const long MaxFileSize = 5 * 1024 * 1024;
+
+        public UserController(
+            SignInManager<ApplicationUser> signInManager,
+            IWebHostEnvironment environment,
+            UserManager<ApplicationUser> userManager)
         {
             _signInManager = signInManager;
             _environment = environment;
+            _userManager = userManager;
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
         {
             var response = await Mediator.Send(command);
@@ -36,6 +47,7 @@ namespace ChatApplicationAPI.API.Controllers
         }
 
         [HttpPut("update-profile")]
+        [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileCommand command)
         {
             try
@@ -67,6 +79,7 @@ namespace ChatApplicationAPI.API.Controllers
         }
 
         [HttpPost("upload-profile-photo")]
+        [Authorize]
         public async Task<IActionResult> UploadProfilePhoto([FromForm] ProfilePhotoUploadModelDto model)
         {
             try
@@ -86,6 +99,7 @@ namespace ChatApplicationAPI.API.Controllers
                 {
                     return BadRequest(new { IsSuccess = false, Message = "Sadece .jpg, .jpeg, .png ve .gif dosyaları kabul edilmektedir." });
                 }
+
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
                 {
@@ -107,12 +121,12 @@ namespace ChatApplicationAPI.API.Controllers
                 }
 
                 var url = $"/uploads/profiles/{fileName}";
-                
-                return Ok(new 
-                { 
-                    IsSuccess = true, 
-                    Message = "Fotoğraf başarıyla yüklendi.", 
-                    ProfilePhotoUrl = url 
+
+                return Ok(new
+                {
+                    IsSuccess = true,
+                    Message = "Fotoğraf başarıyla yüklendi.",
+                    ProfilePhotoUrl = url
                 });
             }
             catch (Exception ex)
@@ -124,14 +138,19 @@ namespace ChatApplicationAPI.API.Controllers
         [HttpGet("auth-status")]
         public ActionResult GetAuthStatus()
         {
-            return Ok(new { IsAuthenticated = User.Identity?.IsAuthenticated });
+            return Ok(new { IsAuthenticated = User.Identity?.IsAuthenticated ?? false });
         }
 
         [HttpGet("user-info")]
+        [Authorize]
         public async Task<ActionResult> GetUserInfo()
         {
-            if (User.Identity?.IsAuthenticated == false) return NoContent();
             var user = await _signInManager.UserManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+            }
+
             return Ok(new
             {
                 user.Id,
@@ -140,10 +159,12 @@ namespace ChatApplicationAPI.API.Controllers
                 user.LastName,
                 user.Email,
                 user.ProfilePhotoUrl,
+                user.FriendCode
             });
         }
 
         [HttpGet("list")]
+        [Authorize]
         public async Task<IActionResult> GetUsers(
             [FromQuery] string? searchTerm = null,
             [FromQuery] string? excludeUserId = null,
@@ -169,6 +190,158 @@ namespace ChatApplicationAPI.API.Controllers
 
             var response = await Mediator.Send(query);
             return Ok(new { IsSuccess = true, Data = response });
+        }
+
+        // ✅ Google Login - Başlangıç
+        [HttpGet("google-login")]
+        [AllowAnonymous]
+        public IActionResult GoogleLogin()
+        {
+            var redirectUrl = Url.Action(nameof(GoogleCallback), "User", null, Request.Scheme);
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+                GoogleDefaults.AuthenticationScheme, redirectUrl);
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        }
+
+        // ✅ Google Callback
+        [HttpGet("google-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleCallback()
+        {
+            try
+            {
+                var info = await _signInManager.GetExternalLoginInfoAsync();
+                if (info == null)
+                {
+                    return Redirect("http://localhost:4200/login?error=external_auth_failed");
+                }
+
+                // ✅ Email'i al
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrEmpty(email))
+                {
+                    return Redirect("http://localhost:4200/login?error=no_email");
+                }
+
+                // ✅ Kullanıcıyı bul veya oluştur
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    // ✅ Yeni kullanıcı oluştur
+                    user = new ApplicationUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        Name = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "User",
+                        LastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "",
+                        FriendCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper(),
+                        EmailConfirmed = true
+                    };
+
+                    var createResult = await _userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                    {
+                        return Redirect("http://localhost:4200/login?error=user_creation_failed");
+                    }
+
+                    // ✅ External login bağla
+                    await _userManager.AddLoginAsync(user, info);
+                }
+                else
+                {
+                    // ✅ Mevcut kullanıcıya external login ekle (yoksa)
+                    var existingLogins = await _userManager.GetLoginsAsync(user);
+                    if (!existingLogins.Any(l => l.LoginProvider == info.LoginProvider && l.ProviderKey == info.ProviderKey))
+                    {
+                        await _userManager.AddLoginAsync(user, info);
+                    }
+                }
+
+                // ✅ Sign in (cookie set edilir)
+                await _signInManager.SignInAsync(user, isPersistent: true);
+
+                // ✅ Angular chat sayfasına yönlendir
+                return Redirect("http://localhost:4200/chat");
+            }
+            catch (Exception ex)
+            {
+                // ✅ Hata logla
+                Console.WriteLine($"Google callback error: {ex.Message}");
+                return Redirect("http://localhost:4200/login?error=server_error");
+            }
+        }
+
+        // ✅ Microsoft Login - Başlangıç
+        [HttpGet("microsoft-login")]
+        [AllowAnonymous]
+        public IActionResult MicrosoftLogin()
+        {
+            var redirectUrl = Url.Action(nameof(MicrosoftCallback), "User", null, Request.Scheme);
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+                MicrosoftAccountDefaults.AuthenticationScheme, redirectUrl);
+            return Challenge(properties, MicrosoftAccountDefaults.AuthenticationScheme);
+        }
+
+        // ✅ Microsoft Callback
+        [HttpGet("microsoft-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> MicrosoftCallback()
+        {
+            try
+            {
+                var info = await _signInManager.GetExternalLoginInfoAsync();
+                if (info == null)
+                {
+                    return Redirect("http://localhost:4200/login?error=external_auth_failed");
+                }
+
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrEmpty(email))
+                {
+                    return Redirect("http://localhost:4200/login?error=no_email");
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        Name = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "User",
+                        LastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "",
+                        FriendCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper(),
+                        EmailConfirmed = true
+                    };
+
+                    var createResult = await _userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                    {
+                        return Redirect("http://localhost:4200/login?error=user_creation_failed");
+                    }
+
+                    await _userManager.AddLoginAsync(user, info);
+                }
+                else
+                {
+                    var existingLogins = await _userManager.GetLoginsAsync(user);
+                    if (!existingLogins.Any(l => l.LoginProvider == info.LoginProvider && l.ProviderKey == info.ProviderKey))
+                    {
+                        await _userManager.AddLoginAsync(user, info);
+                    }
+                }
+
+                await _signInManager.SignInAsync(user, isPersistent: true);
+
+                return Redirect("http://localhost:4200/chat");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Microsoft callback error: {ex.Message}");
+                return Redirect("http://localhost:4200/login?error=server_error");
+            }
         }
     }
 }
