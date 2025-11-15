@@ -90,7 +90,9 @@ export class Friends implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadPendingRequestCount();
-
+      this.friendService.friendsListChanges().subscribe(friends => {
+    this.friends = friends;
+  });
     this.subscriptions.push(
       this.route.paramMap.subscribe((params: ParamMap) => {
         this.pendingFriendId = params.get('id');
@@ -400,6 +402,7 @@ export class Friends implements OnInit, OnDestroy {
           );
         });
       })
+      
     );
 
     this.signalRService.onReceiveMessage((
@@ -447,6 +450,24 @@ export class Friends implements OnInit, OnDestroy {
         );
       });
     });
+      this.signalRService.onFriendRequestReceived((request) => {
+    this.ngZone.run(() => {
+      const normalizedRequest: PendingFriendRequest = {
+        ...request,
+        senderProfilePhotoUrl: request.senderProfilePhotoUrl ?? null
+      };
+      this.pendingRequests = [normalizedRequest, ...this.pendingRequests];
+      this.pendingRequestCount = this.pendingRequests.length;
+      this.updateView();
+      this.playNotificationSound();
+    });
+  });
+    this.signalRService.onFriendRequestAccepted((data) => {
+  this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== data.friendshipId);
+  this.pendingRequestCount = this.pendingRequests.length;
+  this.loadFriendsWithMessages();
+  this.updateView();
+});
   }
 
   private handleNewMessage(
@@ -536,4 +557,6 @@ export class Friends implements OnInit, OnDestroy {
     this.filteredFriends = [...this.friends];
     this.cdr.detectChanges();
   }
+
+
 }

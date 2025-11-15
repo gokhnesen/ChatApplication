@@ -127,15 +127,4 @@ export class UserService {
     return this.httpClient.get<any>(`${this.apiUrl}/User/list?onlyBlocked=true`, { withCredentials: true });
   }
 
-  loginWithGoogle() {
-    if (typeof window !== 'undefined') {
-      window.location.href = `${this.apiUrl}/User/google-login`;
-    }
-  }
-
-  loginWithMicrosoft() {
-    if (typeof window !== 'undefined') {
-      window.location.href = `${this.apiUrl}/User/microsoft-login`;
-    }
-  }
 }

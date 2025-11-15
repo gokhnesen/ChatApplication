@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, switchMap, BehaviorSubject, tap } from 'rxjs';
 import { UserService } from './user-service';
 import { Friend, PendingFriendRequest } from '../shared/models/friend';
 import { environment } from '../../../environments/environment';
@@ -12,6 +12,7 @@ export class FriendService {
   private apiUrl = environment.apiUrl;
   private httpClient = inject(HttpClient);
   private userService = inject(UserService);
+  private friendsList$ = new BehaviorSubject<Friend[]>([]);
   
   respondToFriendRequest(command: any): Observable<any> {
     return this.httpClient.post<any>(`${this.apiUrl}/friend/respond`, command, { withCredentials: true });
@@ -56,7 +57,14 @@ export class FriendService {
   }
 
   removeFriend(friendId: string): Observable<any> {
-    return this.httpClient.delete<any>(`${this.apiUrl}/friend/remove/${friendId}`, { withCredentials: true });
+    return this.httpClient.delete<any>(`${this.apiUrl}/friend/remove/${friendId}`, { withCredentials: true }).pipe(
+      switchMap((response) => {
+        return this.getMyFriends();
+      }),
+      tap((friends) => {
+        this.friendsList$.next(friends);
+      })
+    );
   }
 
   blockUser(blockerdId: string, blockedUserId: string): Observable<any> {
@@ -65,5 +73,9 @@ export class FriendService {
 
   unblockUser(blockedUserId: string): Observable<any> {
     return this.httpClient.post<any>(`${this.apiUrl}/Friend/unblock`, { blockedUserId }, { withCredentials: true });
+  }
+
+  friendsListChanges() {
+    return this.friendsList$.asObservable();
   }
 }

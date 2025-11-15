@@ -38,63 +38,20 @@ namespace ChatApplicationAPI.API
             builder.Services.AddPersistenceServices(builder.Configuration);
             builder.Services.AddSignalR();
 
-            // ✅ Data Protection - TEK SEFER EKLE
-            builder.Services.AddDataProtection()
-                .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), "keys")))
-                .SetApplicationName("ChatApplication");
 
             // ✅ Identity
             builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ChatAppDbContext>();
 
-            // ✅ Authentication - Google ve Microsoft
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultScheme = IdentityConstants.ApplicationScheme;
-                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-
-            })
-.AddGoogle(googleOptions =>
-{
-    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-    googleOptions.CallbackPath = "/api/User/google-callback"; // ✅ Değişti
-    googleOptions.SaveTokens = true;
-    googleOptions.CorrelationCookie.SameSite = SameSiteMode.None;
-    googleOptions.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
-})
-.AddMicrosoftAccount(microsoftOptions =>
-{
-    microsoftOptions.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
-    microsoftOptions.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
-    microsoftOptions.CallbackPath = "/api/User/microsoft-callback"; // ✅ Değişti
-    microsoftOptions.SaveTokens = true;
-    microsoftOptions.CorrelationCookie.SameSite = SameSiteMode.None;
-    microsoftOptions.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
-});
-
-            // ✅ Cookie yapılandırması
             builder.Services.ConfigureApplicationCookie(options =>
             {
-                options.Cookie.SameSite = SameSiteMode.None; // ✅ Cross-origin için None
+                options.Cookie.SameSite = SameSiteMode.None;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.IsEssential = true;
             });
 
-            // ✅ External authentication cookie ayarları
-            builder.Services.Configure<CookieAuthenticationOptions>(
-                IdentityConstants.ExternalScheme,
-                options =>
-                {
-                    options.Cookie.SameSite = SameSiteMode.None; // ✅ Cross-origin için None
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    options.Cookie.HttpOnly = true;
-                    options.Cookie.IsEssential = true;
-                });
-
-            // ✅ CORS
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -120,13 +77,10 @@ namespace ChatApplicationAPI.API
                 app.MapOpenApi();
             }
 
-            // ✅ CORS önce gelmeli
             app.UseCors();
-
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
-            // ✅ Authentication ve Authorization
             app.UseAuthentication();
             app.UseAuthorization();
 

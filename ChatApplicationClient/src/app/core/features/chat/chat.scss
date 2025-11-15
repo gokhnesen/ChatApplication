@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   padding: 1rem;
-  background: rgba(30, 30, 30, 0.8);
+  background: #202c33;
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
@@ -261,143 +261,113 @@
 
 .emoji-picker-wrapper {
   position: absolute;
-  bottom: calc(100% + 8px); // Form'un hemen üstünde
-  left: 16px;
-  z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  border-radius: 12px;
+  bottom: calc(100% + 12px);
+  left: 24px;
+  z-index: 1100;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  border-radius: 16px;
   overflow: hidden;
-  max-height: 420px; // Maksimum yükseklik sınırı
-  max-width: 352px; // Maksimum genişlik
+  background: #23272f;
+  border: 1px solid #31363b;
+  max-width: 380px;
+  max-height: 440px;
+  padding: 0;
+  transition: box-shadow 0.2s;
 
-  // Emoji picker'ı WhatsApp temasına göre özelleştir
-  ::ng-deep {
-    emoji-mart {
-      .emoji-mart {
-        background: #202c33 !important;
-        border: 1px solid #2a3942 !important;
-        max-height: 420px !important;
-        
-        // Search alanı
-        .emoji-mart-search {
-          padding: 12px;
-          background: #202c33 !important;
-          border-bottom: 1px solid #2a3942 !important;
+  ::ng-deep emoji-mart {
+    .emoji-mart {
+      background: #23272f !important;
+      border: none !important;
+      box-shadow: none !important;
+      border-radius: 16px !important;
+      max-height: 440px !important;
 
-          input {
-            background: #111b21 !important;
-            border: 1px solid #2a3942 !important;
-            color: #e9edef !important;
-            padding: 8px 12px !important;
-            border-radius: 8px !important;
-            font-size: 14px !important;
 
-            &::placeholder {
-              color: #8696a0 !important;
-            }
 
-            &:focus {
-              outline: none !important;
-              border-color: #00a884 !important;
-            }
+      .emoji-mart-category-label {
+        background: #23272f !important;
+        span {
+          background: #23272f !important;
+          color: #e9edef !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+        }
+      }
+
+      .emoji-mart-scroll {
+        max-height: 300px !important;
+        overflow-y: auto !important;
+        padding: 8px 12px;
+
+        &::-webkit-scrollbar {
+          width: 6px;
+        }
+        &::-webkit-scrollbar-thumb {
+          background: #31363b;
+          border-radius: 3px;
+        }
+      }
+
+      .emoji-mart-emoji {
+        &:hover::before {
+          background: rgba(99,102,241,0.12) !important;
+        }
+      }
+
+      .emoji-mart-anchors {
+        display: none !important;
+        background: #23272f !important;
+        border-top: 1px solid #31363b !important;
+        padding: 10px 0 !important;
+        display: flex;
+        justify-content: space-around;
+
+        button {
+          color: #7c8591 !important;
+          background: transparent !important;
+          border-radius: 8px !important;
+          transition: background 0.2s, color 0.2s;
+
+          &:hover {
+            background: rgba(99,102,241,0.08) !important;
+            color: #6366f1 !important;
+          }
+
+          &.emoji-mart-anchor-selected {
+            background: rgba(99,102,241,0.18) !important;
+            color: #6366f1 !important;
           }
         }
+      }
+      .emoji-mart-search {
+        display: none !important;
+      }
 
-        // Kategoriler
-        .emoji-mart-category-label {
-          background: #202c33 !important;
-
-          span {
-            background: #202c33 !important;
-            color: #e9edef !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
+      .emoji-mart-skin-swatches {
+        background: #23272f !important;
+        border: 1px solid #31363b !important;
+        .emoji-mart-skin-swatch {
+          &:hover {
+            background: rgba(99,102,241,0.08) !important;
           }
-        }
-
-        // Emoji scroll alanı
-        .emoji-mart-scroll {
-          max-height: 280px !important; // Scroll alanını sınırla
-          overflow-y: auto !important;
-          
-          &::-webkit-scrollbar {
-            width: 6px;
-          }
-
-          &::-webkit-scrollbar-track {
-            background: transparent;
-          }
-
-          &::-webkit-scrollbar-thumb {
-            background: #374249;
-            border-radius: 3px;
-
-            &:hover {
-              background: #3e4a52;
-            }
-          }
-        }
-
-        // Emoji butonları
-        .emoji-mart-emoji {
-          &:hover::before {
-            background: rgba(0, 168, 132, 0.1) !important;
-          }
-        }
-
-        // Kategori butonları (alt kısım)
-        .emoji-mart-anchors {
-          background: #202c33 !important;
-          border-top: 1px solid #2a3942 !important;
-          padding: 8px 0 !important;
-
-          button {
-            color: #8696a0 !important;
-
-            &:hover {
-              color: #e9edef !important;
-            }
-
-            &.emoji-mart-anchor-selected {
-              color: #00a884 !important;
-            }
-          }
-        }
-
-        // Skin tone seçici
-        .emoji-mart-skin-swatches {
-          background: #202c33 !important;
-          border: 1px solid #2a3942 !important;
-
-          .emoji-mart-skin-swatch {
-            &:hover {
-              background: rgba(0, 168, 132, 0.1) !important;
-            }
-
-            &.emoji-mart-skin-swatch-selected {
-              background: rgba(0, 168, 132, 0.2) !important;
-            }
+          &.emoji-mart-skin-swatch-selected {
+            background: rgba(99,102,241,0.18) !important;
           }
         }
       }
     }
   }
 
-  // Mobil için responsive
-  @media (max-width: 768px) {
+  @media (max-width: 600px) {
     left: 8px;
     right: 8px;
-    max-width: calc(100vw - 32px);
-    max-height: 350px;
-
-    ::ng-deep {
-      emoji-mart {
-        .emoji-mart {
-          max-height: 350px !important;
-
-          .emoji-mart-scroll {
-            max-height: 220px !important;
-          }
+    max-width: calc(100vw - 16px);
+    max-height: 320px;
+    ::ng-deep emoji-mart {
+      .emoji-mart {
+        max-height: 320px !important;
+        .emoji-mart-scroll {
+          max-height: 180px !important;
         }
       }
     }
