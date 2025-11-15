@@ -113,7 +113,10 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   ngOnInit(): void {
     const signalUser = this.userService.currentUser();
-    
+      this.friendService.friendsListChanges().subscribe(friends => {
+    this.friendsList = friends;
+  });
+
     if (signalUser) {
       this.setCurrentUserFromSignal(signalUser);
       this.initializeChat();
@@ -903,39 +906,23 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.showUserMenu = !this.showUserMenu;
   }
 
-  // ✅ GÜNCELLENECEK: Arkadaşı sil ve listeyi yenile
-  removeFriend() {
-    if (!confirm(`${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`)) {
-      return;
-    }
-
-    this.friendService.removeFriend(this.receiverUser.id).subscribe({
-      next: (response) => {
-        if (response.isSuccess) {
-          console.log('Arkadaş başarıyla silindi.');
-          this.showUserMenu = false;
-          
-          // ✅ Listeyi yenile ve sonraki arkadaşa geç
-          this.friendService.getMyFriends().subscribe({
-            next: (friends) => {
-              this.friendsList = friends;
-              this.navigateToNextFriend();
-            },
-            error: (error) => {
-              console.error('Arkadaş listesi yenilenemedi:', error);
-              this.navigateToNextFriend();
-            }
-          });
-        } else {
-          alert(response.message || 'Arkadaş silinemedi.');
-        }
-      },
-      error: (error) => {
-        console.error('Arkadaş silme hatası:', error);
-        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
-      }
-    });
+removeFriend() {
+  if (!confirm(`${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`)) {
+    return;
   }
+
+  this.friendService.removeFriend(this.receiverUser.id).subscribe({
+    next: () => {
+      this.showUserMenu = false;
+      // Hard refresh ile sayfayı tamamen yenile
+      window.location.reload();
+    },
+    error: (error) => {
+      console.error('Arkadaş silme hatası:', error);
+      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+    }
+  });
+}
 
   // ✅ GÜNCELLENECEK: Kullanıcıyı engelle ve listeyi yenile
   blockUser() {

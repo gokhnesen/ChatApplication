@@ -1,7 +1,9 @@
 ﻿using ChatApplication.Application.Interfaces.Friend;
+using ChatApplication.Application.SignalR;
 using ChatApplication.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -16,17 +18,20 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
         private readonly IFriendWriteRepository _friendWriteRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<SendFriendRequestHandler> _logger;
+        private readonly IHubContext<ChatHub> _hubContext;
 
         public SendFriendRequestHandler(
             IFriendReadRepository friendReadRepository,
             IFriendWriteRepository friendWriteRepository,
             UserManager<ApplicationUser> userManager,
-            ILogger<SendFriendRequestHandler> logger)
+            ILogger<SendFriendRequestHandler> logger,
+            IHubContext<ChatHub> hubContext)
         {
             _friendReadRepository = friendReadRepository;
             _friendWriteRepository = friendWriteRepository;
             _userManager = userManager;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task<SendFriendRequestResponse> Handle(SendFriendRequestCommand request, CancellationToken cancellationToken)
@@ -132,6 +137,21 @@ namespace ChatApplication.Application.Features.Friend.Commands.SendFriendRequest
 
                 await _friendWriteRepository.AddAsync(friendship);
                 await _friendWriteRepository.SaveAsync();
+
+                // SignalR ile canlı bildirim gönder
+                var requestInfo = new
+                {
+                    friendshipId = friendship.Id,
+                    senderId = sender.Id,
+                    senderName = sender.Name,
+                    senderLastName = sender.LastName,
+                    senderEmail = sender.Email,
+                    requestDate = friendship.RequestDate,
+                    senderProfilePhotoUrl = sender.ProfilePhotoUrl
+                };
+
+                await _hubContext.Clients.User(receiver.Id)
+                    .SendAsync("FriendRequestReceived", requestInfo);
 
                 return new SendFriendRequestResponse
                 {

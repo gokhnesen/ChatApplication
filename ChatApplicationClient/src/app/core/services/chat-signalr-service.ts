@@ -32,26 +32,44 @@ export class ChatSignalrService {
   onReceiveMessage(callback: (
     senderId: string, 
     content: string,
-    type?: MessageType,
-    attachmentUrl?: string | null,
-    attachmentName?: string | null,
-    attachmentSize?: number | null
+    type: MessageType,
+    attachmentUrl: string | null,
+    attachmentName: string | null,
+    attachmentSize: number | null
   ) => void): void {
     this.hubConnection?.off('ReceiveMessage');
-    this.hubConnection?.on('ReceiveMessage', callback);
+    this.hubConnection?.on('ReceiveMessage', (
+      senderId: string, 
+      content: string,
+      type: MessageType,
+      attachmentUrl: string | null,
+      attachmentName: string | null,
+      attachmentSize: number | null
+    ) => {
+      callback(senderId, content, type, attachmentUrl, attachmentName, attachmentSize);
+    });
   }
 
   // ✅ GÜNCELLENECEK - Attachment bilgilerini ekle
   onMessageSent(callback: (
     receiverId: string, 
     content: string,
-    type?: MessageType,
-    attachmentUrl?: string | null,
-    attachmentName?: string | null,
-    attachmentSize?: number | null
+    type: MessageType,
+    attachmentUrl: string | null,
+    attachmentName: string | null,
+    attachmentSize: number | null
   ) => void): void {
     this.hubConnection?.off('MessageSent');
-    this.hubConnection?.on('MessageSent', callback);
+    this.hubConnection?.on('MessageSent', (
+      receiverId: string, 
+      content: string,
+      type: MessageType,
+      attachmentUrl: string | null,
+      attachmentName: string | null,
+      attachmentSize: number | null
+    ) => {
+      callback(receiverId, content, type, attachmentUrl, attachmentName, attachmentSize);
+    });
   }
 
   onMessageError(callback: (error: string) => void): void {
@@ -98,4 +116,31 @@ export class ChatSignalrService {
   stopConnection(): void {
     this.hubConnection?.stop().catch(() => {});
   }
+
+  onFriendRequestReceived(callback: (
+  request: {
+    friendshipId: string;
+    senderId: string;
+    senderName: string;
+    senderLastName: string;
+    senderEmail: string;
+    senderProfilePhotoUrl?: string | null;
+    requestDate: string;
+  }
+) => void): void {
+  this.hubConnection?.off('FriendRequestReceived');
+  this.hubConnection?.on('FriendRequestReceived', callback);
+}
+
+onFriendRequestAccepted(callback: (
+  data: {
+    friendshipId: string;
+    senderId: string;
+    receiverId: string;
+    acceptedAt: string;
+  }
+) => void): void {
+  this.hubConnection?.off('FriendRequestAccepted');
+  this.hubConnection?.on('FriendRequestAccepted', callback);
+}
 }

@@ -5,6 +5,7 @@ using ChatApplication.Domain.Entities;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading;
 using System.Threading.Tasks;
+using ChatApplication.Application.Interfaces.Friend;
 
 namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
 {
@@ -12,17 +13,45 @@ namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
     {
         private readonly IWriteRepository<Message> _writeRepository;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IFriendReadRepository _friendReadRepository;
 
         public SendMessageCommandHandler(
             IWriteRepository<Message> writeRepository,
-            IHubContext<ChatHub> hubContext)
+            IHubContext<ChatHub> hubContext,
+            IFriendReadRepository friendReadRepository)
         {
             _writeRepository = writeRepository;
             _hubContext = hubContext;
+            _friendReadRepository = friendReadRepository;
         }
 
         public async Task<SendMessageCommandResponse> Handle(SendMessageCommand request, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrEmpty(request.ReceiverId))
+            {
+                throw new InvalidOperationException("Alıcı belirtilmemiş.");
+            }
+
+            // Friend check: only allow sending if users are friends and not blocked
+            var friendship = await _friendReadRepository.GetFriendRequestAsync(request.SenderId, request.ReceiverId);
+            if (friendship == null || friendship.Status != FriendStatus.Onaylandi)
+            {
+                throw new InvalidOperationException("Mesaj gönderebilmek için alıcı ile arkadaş olmanız gerekir.");
+            }
+
+            // Block checks
+            var receiverBlockedSender = await _friendReadRepository.IsBlockedAsync(request.ReceiverId, request.SenderId);
+            if (receiverBlockedSender)
+            {
+                throw new InvalidOperationException("Alıcı sizi engellemiş, mesaj gönderemezsiniz.");
+            }
+
+            var senderBlockedReceiver = await _friendReadRepository.IsBlockedAsync(request.SenderId, request.ReceiverId);
+            if (senderBlockedReceiver)
+            {
+                throw new InvalidOperationException("Bu kullanıcı engellenmiş, işlem yapılamaz.");
+            }
+
             var message = new Message
             {
                 SenderId = request.SenderId,

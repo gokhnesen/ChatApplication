@@ -1,6 +1,8 @@
 using ChatApplication.Application.Interfaces.Friend;
+using ChatApplication.Application.SignalR;
 using ChatApplication.Domain.Entities;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -13,15 +15,18 @@ namespace ChatApplication.Application.Features.Friend.Commands.RespondToFriendRe
         private readonly IFriendReadRepository _friendReadRepository;
         private readonly IFriendWriteRepository _friendWriteRepository;
         private readonly ILogger<RespondToFriendRequestHandler> _logger;
+        private readonly IHubContext<ChatHub> _hubContext;
 
         public RespondToFriendRequestHandler(
             IFriendReadRepository friendReadRepository,
             IFriendWriteRepository friendWriteRepository,
-            ILogger<RespondToFriendRequestHandler> logger)
+            ILogger<RespondToFriendRequestHandler> logger,
+            IHubContext<ChatHub> hubContext)
         {
             _friendReadRepository = friendReadRepository;
             _friendWriteRepository = friendWriteRepository;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task<RespondToFriendRequestResponse> Handle(RespondToFriendRequestCommand request, CancellationToken cancellationToken)
@@ -59,6 +64,31 @@ namespace ChatApplication.Application.Features.Friend.Commands.RespondToFriendRe
                 if (request.Accept)
                 {
                     friendship.AcceptedDate = DateTime.UtcNow;
+                }
+
+                if (friendship.Status == FriendStatus.Onaylandi)
+                {
+                    var notifyInfo = new    
+                    {
+                        friendshipId = friendship.Id,
+                        senderId = friendship.SenderId,
+                        senderName = friendship.Sender?.Name,
+                        senderLastName = friendship.Sender?.LastName,
+                        senderEmail = friendship.Sender?.Email,
+                        senderProfilePhotoUrl = friendship.Sender?.ProfilePhotoUrl,
+                        receiverId = friendship.ReceiverId,
+                        receiverName = friendship.Receiver?.Name,
+                        receiverLastName = friendship.Receiver?.LastName,
+                        receiverEmail = friendship.Receiver?.Email,
+                        receiverProfilePhotoUrl = friendship.Receiver?.ProfilePhotoUrl,
+                        acceptedDate = friendship.AcceptedDate
+                    };
+
+                    await _hubContext.Clients.User(friendship.SenderId)
+                        .SendAsync("FriendRequestAccepted", notifyInfo);
+
+                    await _hubContext.Clients.User(friendship.ReceiverId)
+                        .SendAsync("FriendRequestAccepted", notifyInfo);
                 }
 
                 await _friendWriteRepository.UpdateAsync(friendship);
