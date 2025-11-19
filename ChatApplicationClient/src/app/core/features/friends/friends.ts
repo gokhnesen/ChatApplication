@@ -11,6 +11,7 @@ import { Message, MessageType } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { FriendRequest } from './friend-request/friend-request';
+import { NotificationService } from '../../services/notification-service'; // EKLE
 
 @Component({
   selector: 'app-friends',
@@ -40,6 +41,8 @@ export class Friends implements OnInit, OnDestroy {
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
   private messageBroadcast = inject(MessageService);
+  private notificationService = inject(NotificationService); // EKLE
+
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private subscriptions: Subscription[] = [];
@@ -191,6 +194,9 @@ export class Friends implements OnInit, OnDestroy {
         
         if (accept) {
           this.loadFriendsWithMessages();
+          this.notificationService.show('Arkadaşlık isteği kabul edildi!', 'success'); // EKLE
+        } else {
+          this.notificationService.show('Arkadaşlık isteği reddedildi.', 'info'); // EKLE
         }
         
         if (this.pendingRequests.length === 0) {
@@ -201,7 +207,7 @@ export class Friends implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.processingRequests.delete(fid);
-        alert(err?.error?.message || 'İstek işlenirken hata oluştu');
+        this.notificationService.show(err?.error?.message || 'İstek işlenirken hata oluştu', 'error'); // EKLE
         this.cdr.detectChanges();
       }
     });

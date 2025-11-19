@@ -11,6 +11,7 @@ import { ChatSignalrService } from '../../services/chat-signalr-service';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 import { AttachFilePipe } from "../../pipes/attach-file.pipe";
+import { NotificationService } from '../../services/notification-service';
 
 @Component({
   selector: 'app-chat',
@@ -48,6 +49,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
   private messageBroadcast = inject(MessageService);
+  private notificationService = inject(NotificationService); // EKLE
   private subscriptions: Subscription[] = [];
   
   unreadCount: number = 0;
@@ -73,10 +75,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('recordedVideoElement') recordedVideoElement!: ElementRef<HTMLVideoElement>;
   currentUser: any;
   
-  // ✅ YENİ: Dropdown menü kontrolü
   showUserMenu: boolean = false;
-  
-  // ✅ YENİ: Arkadaş listesi için
   private friendsList: any[] = [];
   
   @HostListener('document:click', ['$event'])
@@ -113,22 +112,22 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   ngOnInit(): void {
     const signalUser = this.userService.currentUser();
-      this.friendService.friendsListChanges().subscribe(friends => {
-    this.friendsList = friends;
-  });
+    this.friendService.friendsListChanges().subscribe(friends => {
+      this.friendsList = friends;
+    });
 
     if (signalUser) {
       this.setCurrentUserFromSignal(signalUser);
       this.initializeChat();
       this.initializeSignalR();
-      this.loadFriendsList(); // ✅ Arkadaş listesini yükle
+      this.loadFriendsList();
     } else {
       this.userService.getUserInfo().subscribe({
         next: (userInfo) => {
           this.setCurrentUserFromSignal(userInfo);
           this.initializeChat();
           this.initializeSignalR();
-          this.loadFriendsList(); // ✅ Arkadaş listesini yükle
+          this.loadFriendsList();
         },
         error: (error) => {
           console.error('Kullanıcı bilgisi alınamadı:', error);
@@ -144,10 +143,27 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     });
   }
 
-  // ✅ YENİ: Arkadaş listesini yükle
   private loadFriendsList(): void {
     this.friendService.getMyFriends().subscribe({
       next: (friends) => {
+        // AI kullanıcıyı ekle (listede yoksa)
+        if (!friends.some((f: any) => f.id === AI_USER.id)) {
+          const aiFriend = {
+            id: AI_USER.id,
+            name: AI_USER.name,
+            lastName: null,
+            profilePhotoUrl: AI_USER.profilePhotoUrl,
+            // Friend arayüzünde zorunlu olabilecek alanlar için makul varsayılanlar
+            senderId: this.currentUser?.id ?? '',
+            receiverId: AI_USER.id,
+            status: 'Accepted',
+            requestDate: new Date().toISOString(),
+            isBlocked: false,
+            isFavorite: false
+          } as any; // TODO: yerine gerçek Friend tipini kullanın
+
+          friends.push(aiFriend);
+        }
         this.friendsList = friends;
       },
       error: (error) => {
@@ -156,26 +172,21 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     });
   }
 
-  // ✅ YENİ: Bir sonraki arkadaşa geç
   private navigateToNextFriend(): void {
     if (this.friendsList.length === 0) {
-      // Arkadaş kalmadıysa, friends sayfasına yönlendir
       this.router.navigate(['/friends']);
       return;
     }
 
-    // Mevcut arkadaşı listeden çıkar
     const currentIndex = this.friendsList.findIndex(f => f.id === this.receiverUser.id);
     if (currentIndex !== -1) {
       this.friendsList.splice(currentIndex, 1);
     }
 
-    // Bir sonraki arkadaşa geç
     if (this.friendsList.length > 0) {
       const nextFriend = this.friendsList[0];
       this.router.navigate(['/chat', nextFriend.id]);
     } else {
-      // Arkadaş kalmadıysa, friends sayfasına yönlendir
       this.router.navigate(['/friends']);
     }
   }
@@ -187,16 +198,13 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.closeVideoRecorder();
   }
 
-  private shouldScrollToBottom: boolean = true; // ✅ YENİ: Scroll kontrolü için flag
+  private shouldScrollToBottom: boolean = true;
 
   ngAfterViewChecked() {
-    // ✅ GÜNCELLENECEK: Sadece yeni mesaj geldiğinde scroll yap
     if (this.shouldScrollToBottom) {
       this.scrollToBottom();
-      this.shouldScrollToBottom = false; // İlk scroll'dan sonra durdur
+      this.shouldScrollToBottom = false;
     }
-    
-    // Sadece bir kez işaretle
     if (!this.hasMarkedAsRead) {
       this.markMessagesAsRead();
     }
@@ -209,18 +217,13 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
     if (unreadMessages.length > 0) {
       this.hasMarkedAsRead = true;
-      
-      // Backend'in beklediği format: userId ve senderId
       this.messageService.markAsRead(this.currentUser.id, this.receiverUser.id).subscribe({
         next: (response) => {
-          // Local state'i güncelle
           unreadMessages.forEach(m => {
             m.isRead = true;
             m.readAt = new Date();
           });
           this.unreadCount = response.unreadCount || 0;
-          
-          // SignalR bildirimi (opsiyonel - backend zaten gönderiyor)
           if (this.signalRService.isConnected()) {
             const messageIds = unreadMessages.map(m => m.id);
             this.signalRService.notifyMessagesRead(messageIds);
@@ -261,12 +264,9 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           attachmentName: attachmentName,
           attachmentSize: attachmentSize
         };
-        
         this.messages.push(newMessage);
-        this.shouldScrollToBottom = true; // ✅ Yeni mesaj gelince scroll yap
+        this.shouldScrollToBottom = true;
       }
-      
-      // Friends component'e bildir
       this.messageBroadcast.notifyNewMessage({
         friendId: senderId,
         content: content,
@@ -280,7 +280,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       });
     });
 
-    // ✅ GÜNCELLENECEK - 6 parametre al
     this.signalRService.onMessageSent((
       receiverId: string, 
       content: string,
@@ -319,7 +318,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.subscriptions.push(
       this.route.params.subscribe(params => {
         const friendId = params['id'];
-        
         if (friendId && friendId !== this.receiverUser.id) {
           this.subscriptions.push(
             this.friendService.getMyFriends().subscribe(friends => {
@@ -331,7 +329,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
                   lastName: friend.lastName,
                   profilePhotoUrl: friend.profilePhotoUrl || 'assets/default-avatar.png'
                 };
-                
                 this.messages = [];
                 this.loadMessages();
               }
@@ -340,7 +337,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         }
       })
     );
-
     if (this.receiverUser && this.receiverUser.id) {
       console.log('receiverUser already set:', this.receiverUser);
       this.loadMessages();
@@ -360,7 +356,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     try {
       if (this.messagesContainer?.nativeElement) {
         const element = this.messagesContainer.nativeElement;
-        // Zorla scroll
         element.scrollTop = element.scrollHeight;
       }
     } catch (err) {
@@ -371,14 +366,13 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   loadMessages(): void {
     if (this.receiverUser && this.receiverUser.id && this.currentUser.id) {
       this.hasMarkedAsRead = false;
-      
       this.subscriptions.push(
         this.messageService.getMessages(this.currentUser.id, this.receiverUser.id)
           .subscribe({
             next: (messages) => {
               this.messages = messages;
               this.calculateUnreadCount();
-              this.shouldScrollToBottom = true; // ✅ Mesajlar yüklenince bir kez scroll yap
+              this.shouldScrollToBottom = true;
             },
             error: () => {}
           })
@@ -615,20 +609,57 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   }
 
   // Mesaj gönder (dosya varsa dosyayla)
+  // Mesaj gönderirken dosya gönderirken notification gösterme!
  async sendMessage() {
-  // Dosya varsa sendMessageWithFile çağır
   if (this.selectedFile) {
     await this.sendMessageWithFile();
-    return; // ✅ ZORUNLU: Return ile fonksiyondan çık!
+    return;
   }
-
-  // Normal text mesaj gönder
   await this.sendTextMessage();
 }
 
   // Normal metin mesajı gönder
   async sendTextMessage() {
     if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
+
+    // AI kullanıcıya mesaj gönderiliyorsa AiService ile iletişim kur
+    if (this.receiverUser.id === AI_USER.id) {
+      const userMsg = this.messageText.trim();
+      // Kullanıcının mesajını UI'ya ekle
+      this.messages.push({
+        id: Date.now().toString(),
+        senderId: this.currentUser.id,
+        receiverId: AI_USER.id,
+        content: userMsg,
+        sentAt: new Date(),
+        isRead: true,
+        type: MessageType.Text
+      });
+
+      this.messageText = '';
+      this.shouldScrollToBottom = true;
+
+      try {
+        const resp = await this.messageService.ask(this.currentUser.id, userMsg).toPromise();
+        const aiText = resp?.response || resp?.text || 'Yanıt alınamadı.';
+
+        // AI cevabını UI'ya ekle
+        this.messages.push({
+          id: (Date.now() + 1).toString(),
+          senderId: AI_USER.id,
+          receiverId: this.currentUser.id,
+          content: aiText,
+          sentAt: new Date(),
+          isRead: true,
+          type: MessageType.Text
+        });
+
+        this.shouldScrollToBottom = true;
+      } catch (err: any) {
+        this.notificationService.show(err?.message || 'AI yanıtı alınamadı', 'error');
+      }
+      return;
+    }
 
     const command = {
       senderId: this.currentUser.id,
@@ -637,12 +668,8 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       type: MessageType.Text
     };
 
-    console.log('📤 Mesaj gönderiliyor:', command);
-
     try {
       const result = await this.messageService.sendMessage(command).toPromise();
-      
-      console.log('✅ API Response:', result);
       
       if (result) {
         const newMessage: Message = {
@@ -676,13 +703,14 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           senderId: this.currentUser.id,
           receiverId: this.receiverUser.id,
           sentAt: new Date(),
-          isOwn: true,
+          isOwn: false,
           type: MessageType.Text
         });
+        // Mesaj gönderildi notification kaldırıldı!
       }
     } catch (error: any) {
-      console.error('❌ Mesaj gönderme hatası:', error);
-      alert(error.message || 'Mesaj gönderilemedi!');
+      // Sadece hata durumunda notification göster
+      this.notificationService.show(error.message || 'Mesaj gönderilemedi!', 'error');
     }
   }
 
@@ -690,11 +718,8 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     if (!this.selectedFile || !this.receiverUser.id || !this.currentUser.id) return;
 
     this.isUploading = true;
-    
     try {
       const uploadResult = await this.messageService.uploadFile(this.selectedFile).toPromise();
-      
-      console.log('📤 Upload result:', uploadResult);
       
       if (!uploadResult || !uploadResult.isSuccess) {
         throw new Error(uploadResult?.message || 'Dosya yüklenemedi');
@@ -710,11 +735,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         attachmentSize: uploadResult.attachmentSize
       };
 
-      console.log('📤 Sending message command:', messageCommand);
-
       const sendResult = await this.messageService.sendMessage(messageCommand).toPromise();
-      
-      console.log('✅ Send result:', sendResult);
       
       if (sendResult) {
         const newMessage: Message = {
@@ -734,8 +755,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         this.messageText = '';
         this.selectedFile = null;
         this.selectedFilePreview = null;
-        
-        this.shouldScrollToBottom = true; // ✅ Dosya gönderince scroll yap
+        this.shouldScrollToBottom = true;
         
         if (this.signalRService.isConnected()) {
           this.signalRService.sendMessage(
@@ -759,18 +779,16 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           attachmentUrl: messageCommand.attachmentUrl,
           attachmentName: messageCommand.attachmentName
         });
-        
-        console.log('✅ Mesaj başarıyla gönderildi ve UI güncellendi');
+        // Dosya ile mesaj gönderildi notification kaldırıldı!
       }
     } catch (error: any) {
-      console.error('❌ Dosya gönderme hatası:', error);
-      alert(error.message || 'Dosya gönderilemedi!');
+      // Sadece hata durumunda notification göster
+      this.notificationService.show(error.message || 'Dosya gönderilemedi!', 'error');
     } finally {
       this.isUploading = false;
     }
   }
 
-  // Dosya boyutu formatla
   formatFileSize(bytes: number | null | undefined): string {
     if (!bytes) return '0 B';
     const k = 1024;
@@ -779,15 +797,10 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
-  // Resim hata durumu
   onImageError(event: any) {
     event.target.src = 'assets/image-error.png';
   }
 
-  // Resim önizleme aç
- 
-
-  // Resim önizleme kapat
   closeImagePreview() {
     this.imagePreviewUrl = null;
   }
@@ -839,8 +852,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         }
       }, 100);
     } catch (error) {
-      console.error('Kamera erişim hatası:', error);
-      alert('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.');
+      this.notificationService.show('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.', 'error'); // EKLE
       this.showCamera = false;
     }
   }
@@ -879,6 +891,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
         // Kamerayı kapat
         this.stopCamera();
+        this.notificationService.show('Fotoğraf çekildi!', 'success'); // EKLE
       }
     }, 'image/jpeg', 0.9);
   }
@@ -901,60 +914,70 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     this.openCamera();
   }
 
-  // ✅ YENİ: Menüyü aç/kapat
   toggleUserMenu() {
     this.showUserMenu = !this.showUserMenu;
   }
 
-removeFriend() {
-  if (!confirm(`${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`)) {
-    return;
-  }
-
-  this.friendService.removeFriend(this.receiverUser.id).subscribe({
-    next: () => {
-      this.showUserMenu = false;
-      // Hard refresh ile sayfayı tamamen yenile
-      window.location.reload();
-    },
-    error: (error) => {
-      console.error('Arkadaş silme hatası:', error);
-      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
-    }
-  });
-}
-
-  // ✅ GÜNCELLENECEK: Kullanıcıyı engelle ve listeyi yenile
-  blockUser() {
-    if (!confirm(`${this.getReceiverFullName()} kişisini engellemek istediğinize emin misiniz? Bu kişi size mesaj gönderemeyecek.`)) {
-      return;
-    }
-
-    this.friendService.blockUser(this.currentUser.id, this.receiverUser.id).subscribe({
-      next: (response) => {
-        if (response.isSuccess) {
-          console.log('Kullanıcı başarıyla engellendi.');
-          this.showUserMenu = false;
-          
-          // ✅ Listeyi yenile ve sonraki arkadaşa geç
-          this.friendService.getMyFriends().subscribe({
-            next: (friends) => {
-              this.friendsList = friends;
-              this.navigateToNextFriend();
-            },
-            error: (error) => {
-              console.error('Arkadaş listesi yenilenemedi:', error);
-              this.navigateToNextFriend();
-            }
-          });
-        } else {
-          alert(response.message || 'Kullanıcı engellenemedi.');
-        }
-      },
-      error: (error) => {
-        console.error('Engelleme hatası:', error);
-        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+async removeFriend() {
+  this.notificationService.show(
+    `${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`,
+    'confirm',
+    {
+      // Custom alan ekliyoruz, notification componentinde kullanacaksınız!
+      action: () => {
+        this.friendService.removeFriend(this.receiverUser.id).subscribe({
+          next: () => {
+            this.showUserMenu = false;
+            this.notificationService.show('Arkadaş başarıyla silindi.', 'success');
+            window.location.reload();
+          },
+          error: () => {
+            this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+          }
+        });
       }
-    });
-  }
+    }
+  );
 }
+
+async blockUser() {
+  this.notificationService.show(
+    `${this.getReceiverFullName()} kişisini engellemek istediğinize emin misiniz? Bu kişi size mesaj gönderemeyecek.`,
+    'confirm',
+    {
+      action: () => {
+        this.friendService.blockUser(this.currentUser.id, this.receiverUser.id).subscribe({
+          next: (response) => {
+            if (response.isSuccess) {
+              this.notificationService.show('Kullanıcı başarıyla engellendi.', 'success');
+              this.showUserMenu = false;
+              this.friendService.getMyFriends().subscribe({
+                next: (friends) => {
+                  this.friendsList = friends;
+                  this.navigateToNextFriend();
+                },
+                error: () => {
+                  this.navigateToNextFriend();
+                }
+              });
+            } else {
+              this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+            }
+          },
+          error: () => {
+            this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+          }
+        });
+      }
+    }
+  );
+}
+}
+
+
+// AI kullanıcı tanımı (kalıcı olarak arkadaş listesine eklenecek)
+const AI_USER = {
+  id: 'ai-bot',
+  name: 'Yapay Zeka',
+  profilePhotoUrl: 'assets/ai-avatar.png'
+};

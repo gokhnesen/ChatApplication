@@ -1,0 +1,16 @@
+<div class="notification-container">
+  <div
+    *ngFor="let n of notifications()"
+    class="notification {{n.type}}"
+    [ngClass]="{'centered-modal': n.type === 'confirm'}"
+  >
+    <span>{{ n.message }}</span>
+    <button class="close-btn" (click)="remove(n.id)">×</button>
+    <ng-container *ngIf="n.type === 'confirm'">
+      <div class="confirm-actions">
+        <button class="yes-btn themed-btn" (click)="confirm(n)">Evet</button>
+        <button class="no-btn themed-btn" (click)="remove(n.id)">Hayır</button>
+      </div>
+    </ng-container>
+  </div>
+</div>

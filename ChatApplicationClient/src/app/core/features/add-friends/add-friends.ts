@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
+import { NotificationService } from '../../services/notification-service'; // EKLE
 import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
@@ -42,7 +43,8 @@ export class AddFriends implements OnInit, OnDestroy {
     private userService: UserService,
     private friendService: FriendService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private notificationService: NotificationService // EKLE
   ) {}
 
   ngOnInit(): void {
@@ -141,11 +143,11 @@ export class AddFriends implements OnInit, OnDestroy {
 
   addFriend(user: SearchUser): void {
     if (this.isAlreadyFriend(user)) { 
-      alert('Zaten arkadaşsınız.'); 
+      this.notificationService.show('Zaten arkadaşsınız.', 'info');
       return; 
     }
     if (this.requestedIds.has(user.id)) {
-      alert('Arkadaşlık isteği zaten gönderilmiş.');
+      this.notificationService.show('Arkadaşlık isteği zaten gönderilmiş.', 'warning');
       return;
     }
 
@@ -155,27 +157,23 @@ export class AddFriends implements OnInit, OnDestroy {
         this.loadingIds.delete(user.id);
         if (res?.isSuccess) {
           this.requestedIds.add(user.id);
-          alert('Arkadaşlık isteği gönderildi!');
+          this.notificationService.show('Arkadaşlık isteği gönderildi!', 'success');
         } else {
-          // Eğer zaten gönderilmişse, requestedIds'e ekle
           if (res?.message?.includes('zaten gönderilmiş') || 
               res?.errors?.some((e: string) => e.includes('already exists'))) {
             this.requestedIds.add(user.id);
           }
-          alert(res?.message || 'Arkadaşlık isteği gönderilemedi.');
+          this.notificationService.show(res?.message || 'Arkadaşlık isteği gönderilemedi.', 'error');
         }
       },
       error: (err) => {
         this.loadingIds.delete(user.id);
         const msg = err?.error?.message || 'Arkadaşlık isteği gönderilemedi.';
-        
-        // Eğer zaten gönderilmişse, requestedIds'e ekle
         if (msg.includes('zaten gönderilmiş') || 
             err?.error?.errors?.some((e: string) => e.includes('already exists'))) {
           this.requestedIds.add(user.id);
         }
-        
-        alert(msg);
+        this.notificationService.show(msg, 'error');
       }
     });
   }
@@ -184,8 +182,8 @@ export class AddFriends implements OnInit, OnDestroy {
     const code = this.searchText.trim();
     if (!code) return;
     this.friendService.sendFriendRequest({ friendCode: code }).subscribe({
-      next: () => alert('Arkadaşlık isteği gönderildi!'),
-      error: () => alert('Arkadaşlık isteği gönderilemedi.')
+      next: () => this.notificationService.show('Arkadaşlık isteği gönderildi!', 'success'),
+      error: () => this.notificationService.show('Arkadaşlık isteği gönderilemedi.', 'error')
     });
   }
 
@@ -196,7 +194,6 @@ export class AddFriends implements OnInit, OnDestroy {
     const fullName = this.normalize(`${u.name} ${u.lastName}`);
     const fullNameAlt = this.normalize(`${u.lastName} ${u.name}`);
 
-    // TAM EŞLEŞME yerine IÇEREN kontrolü
     return email.includes(term)
         || userName.includes(term)
         || friendCode.includes(term)

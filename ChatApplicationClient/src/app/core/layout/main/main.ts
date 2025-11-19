@@ -6,11 +6,12 @@ import { Friends } from '../../features/friends/friends';
 import { AddFriends } from '../../features/add-friends/add-friends';
 import { UserService } from '../../services/user-service';
 import { filter } from 'rxjs/operators';
+import { Notifications } from "../../shared/notifications/notifications";
 
 @Component({
   selector: 'app-main',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, Sidebar, Friends, AddFriends],
+  imports: [CommonModule, RouterOutlet, Sidebar, Friends, AddFriends, Notifications],
   templateUrl: './main.html',
   styleUrls: ['./main.scss']
 })
@@ -31,7 +32,6 @@ export class Main implements OnInit {
   }
 
   ngOnInit(): void {
-    // Kullanıcı giriş yapmışsa ve root path'teyse
     if (this.router.url === '/' || this.router.url === '/chat') {
       this.redirectToLastChat();
     }
@@ -42,6 +42,5 @@ export class Main implements OnInit {
     if (lastFriendId) {
       this.router.navigate(['/chat', lastFriendId]);
     }
-    // Yoksa friends component halledecek
   }
 }

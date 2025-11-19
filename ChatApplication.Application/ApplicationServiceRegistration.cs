@@ -14,6 +14,7 @@ namespace ChatApplication.Application
         public static IServiceCollection AddApplicationServices(this IServiceCollection services )
         {
             services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+            services.AddHttpClient();
             return services;
         }
     }
