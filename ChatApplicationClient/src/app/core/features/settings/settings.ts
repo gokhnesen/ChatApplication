@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
+import { NotificationService } from '../../services/notification-service'; // EKLE
 
 @Component({
   selector: 'app-settings',
@@ -15,6 +16,7 @@ import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 export class Settings implements OnInit {
   private userService = inject(UserService);
   private friendService = inject(FriendService);
+  private notificationService = inject(NotificationService); // EKLE
 
   currentUser: any = null;
   blockedUsers: any[] = [];
@@ -126,35 +128,33 @@ export class Settings implements OnInit {
 
   // ✅ YENİ: Arkadaşı engelle
   blockFriend(friend: any): void {
-    if (!confirm(`${friend.name} ${friend.lastName} kişisini engellemek istediğinize emin misiniz?`)) {
-      return;
-    }
-
-    this.friendService.blockUser(this.currentUser.id, friend.id).subscribe({
-      next: (response) => {
-        if (response.isSuccess) {
-          // Engellenenler listesine ekle
-          this.blockedUsers.push(friend);
-          
-          // Arkadaş listesinden çıkar
-          this.friendsList = this.friendsList.filter(f => f.id !== friend.id);
-          this.filterFriends();
-          
-          alert('Kullanıcı başarıyla engellendi!');
-          
-          // Arkadaş kalmadıysa modalı kapat
-          if (this.friendsList.length === 0) {
-            this.closeAddBlockModal();
-          }
-        } else {
-          alert(response.message || 'Kullanıcı engellenemedi.');
+    this.notificationService.show(
+      `${friend.name} ${friend.lastName} kişisini engellemek istediğinize emin misiniz?`,
+      'confirm',
+      {
+        action: () => {
+          this.friendService.blockUser(this.currentUser.id, friend.id).subscribe({
+            next: (response) => {
+              if (response.isSuccess) {
+                this.blockedUsers.push(friend);
+                this.friendsList = this.friendsList.filter(f => f.id !== friend.id);
+                this.filterFriends();
+                this.notificationService.show('Kullanıcı başarıyla engellendi!', 'success');
+                if (this.friendsList.length === 0) {
+                  this.closeAddBlockModal();
+                }
+              } else {
+                this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+              }
+            },
+            error: (error) => {
+              console.error('Engelleme hatası:', error);
+              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+            }
+          });
         }
-      },
-      error: (error) => {
-        console.error('Engelleme hatası:', error);
-        alert('Bir hata oluştu. Lütfen tekrar deneyin.');
       }
-    });
+    );
   }
 
   // Profil düzenleme
@@ -226,26 +226,30 @@ export class Settings implements OnInit {
     });
   }
 
-  // Engeli kaldır
+  // ✅ Engeli kaldır (notification ile)
   unblockUser(user: any): void {
-    if (!confirm(`${user.name} ${user.lastName} kişisinin engelini kaldırmak istediğinize emin misiniz?`)) {
-      return;
-    }
-
-    this.friendService.unblockUser(user.id).subscribe({
-      next: (response) => {
-        if (response.isSuccess) {
-          this.blockedUsers = this.blockedUsers.filter(u => u.id !== user.id);
-          alert('Engel kaldırıldı!');
-        } else {
-          alert(response.message || 'Engel kaldırılamadı.');
+    this.notificationService.show(
+      `${user.name} ${user.lastName} kişisinin engelini kaldırmak istediğinize emin misiniz?`,
+      'confirm',
+      {
+        action: () => {
+          this.friendService.unblockUser(user.id).subscribe({
+            next: (response) => {
+              if (response.isSuccess) {
+                this.blockedUsers = this.blockedUsers.filter(u => u.id !== user.id);
+                this.notificationService.show('Engel kaldırıldı!', 'success');
+              } else {
+                this.notificationService.show(response.message || 'Engel kaldırılamadı.', 'error');
+              }
+            },
+            error: (error) => {
+              console.error('Engel kaldırma hatası:', error);
+              this.notificationService.show('Bir hata oluştu.', 'error');
+            }
+          });
         }
-      },
-      error: (error) => {
-        console.error('Engel kaldırma hatası:', error);
-        alert('Bir hata oluştu.');
       }
-    });
+    );
   }
 
   // Arkadaşlık kodunu kopyala

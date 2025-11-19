@@ -147,4 +147,8 @@ export class MessageService {
     // Mesajı gönder
     return await this.sendMessage(messageCommand).toPromise();
   }
+
+    ask(userId: string, message: string): Observable<any> {
+    return this.httpClient.post<any>(`${this.apiUrl}/message/ask`, { userId, message });
+  }
 }

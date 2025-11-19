@@ -4,6 +4,7 @@ import { UserService } from '../../services/user-service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, effect, inject } from '@angular/core';
 import { FriendService } from '../../services/friend-service';
+import { NotificationService } from '../../services/notification-service';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,6 +21,7 @@ export class Sidebar {
 
   private userService = inject(UserService);
   private router = inject(Router);
+  private notificationService = inject(NotificationService);
 
   constructor() {
     effect(() => {
@@ -80,17 +82,24 @@ export class Sidebar {
   }
 
   logout(): void {
-    if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
-      this.userService.logout().subscribe({
-        next: () => {
-          this.router.navigate(['/login']);
-        },
-        error: (err) => {
-          console.error('Logout error:', err);
-          // Hata olsa bile login'e yönlendir
-          this.router.navigate(['/login']);
+    this.notificationService.show(
+      'Çıkış yapmak istediğinize emin misiniz?',
+      'confirm',
+      {
+        action: () => {
+          this.userService.logout().subscribe({
+            next: () => {
+              this.notificationService.show('Çıkış başarılı!', 'success');
+              this.router.navigate(['/login']);
+            },
+            error: (err) => {
+              console.error('Logout error:', err);
+              this.notificationService.show('Çıkış sırasında hata oluştu!', 'error');
+              this.router.navigate(['/login']);
+            }
+          });
         }
-      });
-    }
+      }
+    );
   }
 }

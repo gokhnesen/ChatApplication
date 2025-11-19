@@ -32,14 +32,12 @@ namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
                 throw new InvalidOperationException("Alıcı belirtilmemiş.");
             }
 
-            // Friend check: only allow sending if users are friends and not blocked
             var friendship = await _friendReadRepository.GetFriendRequestAsync(request.SenderId, request.ReceiverId);
             if (friendship == null || friendship.Status != FriendStatus.Onaylandi)
             {
                 throw new InvalidOperationException("Mesaj gönderebilmek için alıcı ile arkadaş olmanız gerekir.");
             }
 
-            // Block checks
             var receiverBlockedSender = await _friendReadRepository.IsBlockedAsync(request.ReceiverId, request.SenderId);
             if (receiverBlockedSender)
             {

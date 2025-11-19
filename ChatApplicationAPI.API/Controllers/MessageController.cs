@@ -1,12 +1,12 @@
-﻿using ChatApplication.Application.Features.Messages.Commands;
+﻿using ChatApplication.Application.Features.Messages.Commands.SendAIMessage;
+using ChatApplication.Application.Features.Messages.Commands.SendMessage;
 using ChatApplication.Application.Features.Messages.Queries.GetLatestMessage;
 using ChatApplication.Application.Features.Messages.Queries.GetMessages;
+using ChatApplication.Domain.Entities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using ChatApplication.Application.Features.Messages.Commands.SendMessage;
-using Microsoft.AspNetCore.Hosting;
-using ChatApplication.Domain.Entities;
 
 namespace ChatApplicationAPI.API.Controllers
 {
@@ -64,7 +64,7 @@ namespace ChatApplicationAPI.API.Controllers
                 }
 
                 var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-                
+
                 MessageType messageType;
                 string folderName;
 
@@ -85,10 +85,10 @@ namespace ChatApplicationAPI.API.Controllers
                 }
                 else
                 {
-                    return BadRequest(new 
-                    { 
-                        IsSuccess = false, 
-                        Message = "Desteklenmeyen dosya formatı." 
+                    return BadRequest(new
+                    {
+                        IsSuccess = false,
+                        Message = "Desteklenmeyen dosya formatı."
                     });
                 }
 
@@ -126,11 +126,11 @@ namespace ChatApplicationAPI.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new 
-                { 
-                    IsSuccess = false, 
-                    Message = "Dosya yüklenirken bir hata oluştu.", 
-                    Error = ex.Message 
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = "Dosya yüklenirken bir hata oluştu.",
+                    Error = ex.Message
                 });
             }
         }
@@ -139,6 +139,13 @@ namespace ChatApplicationAPI.API.Controllers
         [HttpGet("{userId1}/{userId2}")]
         public async Task<IActionResult> GetMessages(string userId1, string userId2)
         {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (currentUserId != userId1 && currentUserId != userId2)
+            {
+                return Unauthorized(new { IsSuccess = false, Message = "Bu mesajları görüntüleme yetkiniz yok." });
+            }
+
             var query = new GetMessagesQuery { UserId1 = userId1, UserId2 = userId2 };
             var messages = await Mediator.Send(query);
             return Ok(messages);
@@ -172,5 +179,31 @@ namespace ChatApplicationAPI.API.Controllers
             var message = await Mediator.Send(query);
             return Ok(message);
         }
+
+
+        [HttpPost("ask")]
+        public async Task<IActionResult> Ask([FromBody] SendAIMessageCommand command)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { IsSuccess = false, Message = "Oturum açmanız gerekiyor." });
+                }
+
+                command.UserId = userId;
+                var response = await Mediator.Send(command);
+
+                // Eğer AI servisinden gelen cevapta hata mesajı varsa (önceki kodda ayarlamıştık)
+                // Bunu kontrol edebilirsin veya direkt response'u dönersin.
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { IsSuccess = false, Message = "Yapay zeka servisiyle iletişimde hata oluştu.", Error = ex.Message });
+            }
+        }
     }
 }
+

@@ -1,8 +1,10 @@
 ﻿using ChatApplication.Application;
+using ChatApplication.Application.Middleware;
 using ChatApplication.Application.SignalR;
 using ChatApplication.Domain.Entities;
 using ChatApplication.Persistence;
 using ChatApplication.Persistence.DbContext;
+using ChatApplication.Persistence.DbContext.Seed;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -11,12 +13,11 @@ using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
 
-
 namespace ChatApplicationAPI.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,7 @@ namespace ChatApplicationAPI.API
             builder.Services.AddAuthorization();
 
             var app = builder.Build();
+            await AIFriendSeed.SeedAsync(app.Services);
 
             if (app.Environment.IsDevelopment())
             {
@@ -83,6 +85,7 @@ namespace ChatApplicationAPI.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseMiddleware<AIFriendMiddleware>();
 
             app.MapControllers();
             app.MapHub<ChatHub>("/chathub");
