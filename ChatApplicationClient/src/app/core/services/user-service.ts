@@ -67,7 +67,6 @@ export class UserService {
     return this.userInfoCache$;
   }
 
-  // ✅ Session restore - uygulama başlangıcında çağrılır
   tryRestoreSession(): Observable<User | null> {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     
@@ -126,5 +125,12 @@ export class UserService {
   getBlockedUsers(): Observable<any> {
     return this.httpClient.get<any>(`${this.apiUrl}/User/list?onlyBlocked=true`, { withCredentials: true });
   }
+
+  externalLogin(provider: 'Google' | 'Microsoft') {
+  // Mevcut tarayıcı penceresini backend'in auth endpointine yönlendiriyoruz.
+  // returnUrl: İşlem bitince Backend'in bizi geri göndereceği Angular rotası.
+  const returnUrl = `${window.location.origin}/login-callback`; 
+  window.location.href = `${this.apiUrl}/User/external-login?provider=${provider}&returnUrl=${returnUrl}`;
+}
 
 }

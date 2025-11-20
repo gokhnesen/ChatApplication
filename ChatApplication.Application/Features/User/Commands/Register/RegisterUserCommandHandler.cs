@@ -111,7 +111,7 @@ namespace ChatApplication.Application.Features.User.Commands.Register
             }
         }
 
-        private async Task<string> GenerateUniqueFriendCodeAsync()
+        public async Task<string> GenerateUniqueFriendCodeAsync()
         {
             Random random = new Random();
             string friendCode;
