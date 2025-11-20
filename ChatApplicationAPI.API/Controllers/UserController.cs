@@ -104,50 +104,6 @@ namespace ChatApplicationAPI.API.Controllers
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                 {
                     webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
                 }
@@ -238,6 +194,112 @@ namespace ChatApplicationAPI.API.Controllers
             return Ok(new { IsSuccess = true, Data = response });
         }
 
- 
+        // UserController.cs içerisine ekle
+
+        [HttpGet("external-login")]
+        [AllowAnonymous]
+        public IActionResult ExternalLogin(string provider, string returnUrl = null)
+        {
+            // 1. Kullanıcıyı Google veya Microsoft'a yönlendir
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "User", new { returnUrl });
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+            return Challenge(properties, provider);
+        }
+
+        [HttpGet("external-login-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
+        {
+            returnUrl = returnUrl ?? "/"; // Frontend ana sayfası
+
+            // 2. Google'dan hata döndü mü?
+            if (remoteError != null)
+            {
+                return BadRequest(new { Message = $"Harici sağlayıcı hatası: {remoteError}" });
+            }
+
+            // 3. Google/Microsoft'tan gelen bilgileri al
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+            {
+                return BadRequest(new { Message = "Harici giriş bilgisi yüklenemedi." });
+            }
+
+            // 4. Kullanıcı daha önce bu Google hesabıyla giriş yapmış mı? (Login tablosunda var mı?)
+            var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: true, bypassTwoFactor: true);
+
+            if (signInResult.Succeeded)
+            {
+                // Zaten kayıtlı, cookie oluştu, yönlendir
+                // YÖNLENDİRME DÜZELTMESİ YAPILDI:
+                // Frontend'in cookie'yi kontrol etmesi için /login'e özel parametreyle yönlendir.
+                return Redirect($"https://localhost:4200/login?externalAuth=true");
+            }
+
+            if (signInResult.IsLockedOut)
+            {
+                return BadRequest(new { Message = "Hesap kilitli." });
+            }
+
+            // 5. Kullanıcı yoksa, yeni hesap oluştur (Auto-Register)
+            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            var name = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "User";
+            var surname = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "";
+
+            // Eğer email de yoksa (bazı providerlar vermeyebilir) hata dön
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest(new { Message = "Email bilgisi alınamadı." });
+            }
+
+            // 5.1. Bu email ile normal kayıt olmuş biri var mı?
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                // Kullanıcı tamamen yeni, oluşturalım
+                user = new ApplicationUser
+                {
+                    UserName = email, // Genelde email username olarak kullanılır
+                    Email = email,
+                    Name = name,
+                    LastName = surname,
+                    FriendCode = GenerateFriendCode(), // Senin zorunlu alanın
+                    ProfilePhotoUrl = null,
+                    EmailConfirmed = true // Google'dan geldiyse onaylı sayabiliriz
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    return BadRequest(new { Message = "Kullanıcı oluşturulamadı", Errors = createResult.Errors });
+                }
+            }
+
+            // 5.2. Kullanıcı (yeni veya eski) ile Google hesabını eşleştir (AspNetUserLogins tablosuna yazar)
+            var addLoginResult = await _userManager.AddLoginAsync(user, info);
+            if (!addLoginResult.Succeeded)
+            {
+                return BadRequest(new { Message = "Google hesabı sisteme eklenemedi." });
+            }
+
+            // 6. Giriş yap (Cookie oluştur)
+            await _signInManager.SignInAsync(user, isPersistent: true);
+
+
+            // Frontend'e başarılı dönüş
+            // YÖNLENDİRME DÜZELTMESİ YAPILDI:
+            // Kullanıcıyı direkt chat ekranına değil, /login'e özel parametreyle yönlendiriyoruz.
+            return Redirect("https://localhost:4200/login?externalAuth=true");
+        }
+
+        // Helper method (Senin entity yapına göre)
+        private string GenerateFriendCode()
+        {
+            // Basit bir örnek, çakışma kontrolü yapman gerekebilir
+            return Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+        }
+
+
     }
 }

@@ -386,9 +386,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     ).length;
   }
 
-  // ============ VIDEO KAYIT FONKSİYONLARI ============
 
-  // Video kaydedici aç
   async openVideoRecorder() {
     try {
       this.showVideoRecorder = true;
@@ -400,7 +398,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
             height: { ideal: 720 },
             facingMode: 'user'
           },
-          audio: true // Ses de kaydet
+          audio: true
         });
 
         if (this.videoPreviewElement && this.videoPreviewElement.nativeElement) {

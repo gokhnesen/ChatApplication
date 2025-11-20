@@ -63,10 +63,21 @@
         </span>
       </button>
 
-      <!-- ✅ YENİ: Ayırıcı ve Dış Giriş Butonları -->
-      <div class="divider">
-        <span>veya</span>
-      </div>
+   <div class="divider">
+  <span>veya</span>
+</div>
+
+<div class="social-login">
+  <button type="button" class="social-btn google" (click)="onExternalLogin('Google')" [disabled]="isLoading">
+    <i class="fab fa-google"></i>
+    <span>Google ile Giriş</span>
+  </button>
+
+  <button type="button" class="social-btn microsoft" (click)="onExternalLogin('Microsoft')" [disabled]="isLoading">
+    <i class="fab fa-microsoft"></i>
+    <span>Microsoft ile Giriş</span>
+  </button>
+</div>
       
     </form>
 
