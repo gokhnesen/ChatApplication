@@ -57,6 +57,11 @@ export class Settings implements OnInit {
   };
   attemptedChange = false;
 
+  // göz butonları için state
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+
   ngOnInit(): void {
     this.loadUserInfo();
     this.loadBlockedUsers();
@@ -324,6 +329,11 @@ export class Settings implements OnInit {
     this.passwordForm.newPassword = '';
     this.passwordForm.confirmPassword = '';
     this.attemptedChange = false;
+
+    // reset göz durumları
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
   }
 
   closeChangePasswordModal(): void {
@@ -352,6 +362,14 @@ export class Settings implements OnInit {
     return !!res;
   }
 
+  // Yeni: mevcut şifre ile yeni şifre aynı mı kontrolü
+  isNewPasswordSameAsCurrent(): boolean {
+    const current = (this.passwordForm.currentPassword || '').trim();
+    const nw = (this.passwordForm.newPassword || '').trim();
+    if (!current || !nw) return false;
+    return current === nw;
+  }
+
   passwordsMatch(): boolean {
     return this.passwordForm.newPassword === this.passwordForm.confirmPassword;
   }
@@ -361,6 +379,11 @@ export class Settings implements OnInit {
 
     if (this.hasCurrentPasswordError()) {
       this.notificationService.show('Mevcut şifre boş olamaz.', 'error');
+      return;
+    }
+
+    if (this.isNewPasswordSameAsCurrent()) {
+      this.notificationService.show('Yeni şifre mevcut şifre ile aynı olamaz.', 'error');
       return;
     }
 
@@ -374,23 +397,28 @@ export class Settings implements OnInit {
       return;
     }
 
+    // Backend'in beklediği userId alanını ekleyin (varsa session/cookie yerine)
+    const userId = this.currentUser?.userId ?? this.currentUser?.id ?? this.currentUser?.userID ?? null;
+    if (!userId) {
+      this.notificationService.show('Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.', 'error');
+      return;
+    }
+
     const payload = {
+      userId,
       currentPassword: this.passwordForm.currentPassword,
       newPassword: this.passwordForm.newPassword
     };
 
     this.userService.changePassword(payload).subscribe({
       next: (res) => {
-        if (res?.isSuccess !== false) {
-          this.notificationService.show('Şifre başarıyla değiştirildi.', 'success');
-          this.closeChangePasswordModal();
-        } else {
-          this.notificationService.show(res?.message || 'Şifre değiştirilemedi.', 'error');
-        }
+        this.notificationService.show(res?.message ?? 'Şifre başarıyla değiştirildi.', 'success');
+        this.closeChangePasswordModal();
       },
       error: (err) => {
-        console.error('Şifre değiştirme hatası:', err);
-        this.notificationService.show('Şifre değiştirilirken hata oluştu.', 'error');
+        const msg = err?.error?.title || err?.error?.message || 'Şifre değiştirilirken hata oluştu mevcut şifrenizi kontrol edin.';
+        this.notificationService.show(msg, 'error');
+        console.error('changePassword error', err);
       }
     });
   }
