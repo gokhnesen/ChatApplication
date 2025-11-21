@@ -68,8 +68,7 @@
               <label>Ad:</label>
               <input type="text" [(ngModel)]="editForm.name" class="form-input" (blur)="onNameBlur()" />
               <div class="field-error" *ngIf="(nameTouched || attemptedSave) && hasNameError()">
-                <small *ngIf="CustomValidators?.notWhitespace ? false : false"> </small><!-- placeholder to avoid template diagnostics -->
-                <small *ngIf="CustomValidators ? hasNameError() : hasNameError()">İsim boş olamaz ve en az 2 karakter olmalı.</small>
+                <small *ngIf="hasNameError()">İsim boş olamaz ve en az 2 karakter olmalı.</small>
               </div>
             </div>
             <div class="form-group">
@@ -240,7 +239,36 @@
     <div class="modal-body">
       <div class="form-group">
         <label>Mevcut Şifre</label>
-        <input type="password" [(ngModel)]="passwordForm.currentPassword" class="form-input" />
+        <div class="password-row">
+          <input
+            [type]="showCurrentPassword ? 'text' : 'password'"
+            [(ngModel)]="passwordForm.currentPassword"
+            class="form-input"
+            placeholder="Mevcut şifrenizi girin"
+          />
+          <button
+            type="button"
+            class="eye-btn"
+            (click)="showCurrentPassword = !showCurrentPassword"
+            (mousedown)="$event.preventDefault()"
+            aria-label="Mevcut şifreyi göster"
+          >
+            <ng-container *ngIf="!showCurrentPassword">
+              <!-- eye closed -->
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a16.4 16.4 0 0 1 4.24-5.24"></path>
+                <path d="M1 1l22 22"></path>
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="showCurrentPassword">
+              <!-- eye open -->
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </ng-container>
+          </button>
+        </div>
         <div class="field-error" *ngIf="attemptedChange && hasCurrentPasswordError()">
           <small>Mevcut şifre gerekli.</small>
         </div>
@@ -248,15 +276,70 @@
 
       <div class="form-group">
         <label>Yeni Şifre</label>
-        <input type="password" [(ngModel)]="passwordForm.newPassword" class="form-input" />
+        <div class="password-row">
+          <input
+            [type]="showNewPassword ? 'text' : 'password'"
+            [(ngModel)]="passwordForm.newPassword"
+            class="form-input"
+            placeholder="Yeni şifreniz"
+          />
+          <button
+            type="button"
+            class="eye-btn"
+            (click)="showNewPassword = !showNewPassword"
+            (mousedown)="$event.preventDefault()"
+            aria-label="Yeni şifreyi göster"
+          >
+            <ng-container *ngIf="!showNewPassword">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a16.4 16.4 0 0 1 4.24-5.24"></path>
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="showNewPassword">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </ng-container>
+          </button>
+        </div>
+        <div class="field-error" *ngIf="attemptedChange && isNewPasswordSameAsCurrent()">
+          <small>Yeni şifre mevcut şifre ile aynı olamaz.</small>
+        </div>
         <div class="field-error" *ngIf="attemptedChange && hasNewPasswordError()">
-          <small>Yeni şifre en az 8 karakter, büyük harf, küçük harf, sayı ve özel karakter içermelidir.</small>
+          <small>Yeni şifre en az 8 karakter, büyük/küçük harf, sayı ve özel karakter içermelidir.</small>
         </div>
       </div>
 
       <div class="form-group">
         <label>Yeni Şifre (Tekrar)</label>
-        <input type="password" [(ngModel)]="passwordForm.confirmPassword" class="form-input" />
+        <div class="password-row">
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            [(ngModel)]="passwordForm.confirmPassword"
+            class="form-input"
+            placeholder="Yeni şifreyi tekrar girin"
+          />
+          <button
+            type="button"
+            class="eye-btn"
+            (click)="showConfirmPassword = !showConfirmPassword"
+            (mousedown)="$event.preventDefault()"
+            aria-label="Yeni şifre tekrarını göster"
+          >
+            <ng-container *ngIf="!showConfirmPassword">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a16.4 16.4 0 0 1 4.24-5.24"></path>
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="showConfirmPassword">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </ng-container>
+          </button>
+        </div>
         <div class="field-error" *ngIf="attemptedChange && !passwordsMatch()">
           <small>Şifreler eşleşmiyor.</small>
         </div>

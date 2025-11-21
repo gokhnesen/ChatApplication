@@ -510,26 +510,6 @@
     margin-top: 0.75rem;
   }
 
-  .password-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-
-    .form-input {
-      flex: 1;
-      padding-right: 0.5rem;
-    }
-  }
-
-  .eye-btn {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    color: var(--muted, #cbd6db);
-    padding: 0.45rem 0.6rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-  }
 
   .password-hint {
     color: #9aa9b2;
@@ -550,9 +530,6 @@
       flex-direction: row;
     }
 
-    .eye-btn {
-      padding: 0.4rem 0.5rem;
-    }
   }
 }
 
@@ -970,7 +947,7 @@
   border-bottom: 1px solid rgba(42,57,66,0.6);
   background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
 }
-.change-password_modal .modal-header h3 {
+.change-password-modal .modal-header h3 {
   color: #e9edef;
   font-weight: 700;
   font-size: 1.05rem;
@@ -1046,6 +1023,61 @@
   color: #e9edef;
   padding: 8px 12px;
   border-radius: 8px;
+}
+
+/* ==============================================
+   ŞİFRE GÖSTER/GİZLE ALANI DÜZELTMESİ (FIX)
+   ============================================== */
+
+.password-row {
+  position: relative; /* ÖNEMLİ: Kapsayıcı referans noktası */
+  width: 100%;
+  display: block;
+
+  /* Input alanı ayarları */
+  .form-input {
+    width: 100%;
+    /* Sağ taraftan boşluk bırakıyoruz ki yazı ikona girmesin */
+    padding-right: 45px !important; 
+    box-sizing: border-box;
+  }
+
+  /* Göz butonu (eye-btn) ayarları */
+  .eye-btn {
+    position: absolute; /* Bağımsız hareket etmesini sağlar */
+    top: 50%;           /* Yukarıdan %50 aşağı it */
+    right: 12px;        /* Sağdan 12px içeride dur */
+    transform: translateY(-50%); /* Tam dikey ortalama yap */
+    
+    /* Butonun varsayılan stillerini temizle */
+    background: transparent;
+    border: none;
+    padding: 5px; /* Tıklama alanını biraz genişletir */
+    margin: 0;
+    cursor: pointer;
+    z-index: 10; /* Inputun üzerinde durması için */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Renk Ayarları (Senin temana uygun) */
+    color: #9aa9b2; 
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #e9edef; /* Hover olunca beyazlaşsın */
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    /* SVG İkon boyutu */
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 }
 
 /* responsive küçük ekran ayarı */

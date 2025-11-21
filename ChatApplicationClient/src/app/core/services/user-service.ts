@@ -131,7 +131,7 @@ export class UserService {
   window.location.href = `${this.apiUrl}/User/external-login?provider=${provider}&returnUrl=${returnUrl}`;
 }
 
-  changePassword(payload: { currentPassword: string; newPassword: string }) {
+  changePassword(payload: { userId?: string; currentPassword: string; newPassword: string }) {
     return this.httpClient.post<any>(`${this.apiUrl}/User/change-password`, payload, { withCredentials: true });
   }
 
