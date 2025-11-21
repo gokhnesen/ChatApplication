@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 {
-    public class UnBlockFriendOrUserCommand : IRequest<UnBlockFriendOrUserResponse>
+    public class UnBlockFriendOrUserCommand : IRequest<UnBlockFriendOrUserCommandResponse>
     {
 
         public string BlockerId { get; set; } = string.Empty;

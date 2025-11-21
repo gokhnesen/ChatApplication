@@ -10,11 +10,10 @@
       <p>Hesabınıza giriş yapın</p>
     </div>
 
-    <form (ngSubmit)="login()" class="login-form">
+    <form (ngSubmit)="login()" class="login-form" novalidate>
       <div class="form-group">
         <label for="email">Email</label>
         <div class="input-wrapper">
-          <i class="fas fa-envelope input-icon"></i>
           <input 
             id="email"
             [(ngModel)]="email" 
@@ -23,14 +22,15 @@
             placeholder="ornek@email.com" 
             required 
             autocomplete="email"
-            [disabled]="isLoading" />
+            [disabled]="isLoading"
+            (blur)="emailTouched = true" />
         </div>
+        <div class="field-error" *ngIf="emailError && (emailTouched || attemptedLogin)">{{ emailError }}</div>
       </div>
 
       <div class="form-group">
         <label for="password">Şifre</label>
         <div class="input-wrapper">
-          <i class="fas fa-lock input-icon"></i>
           <input 
             id="password"
             [(ngModel)]="password" 
@@ -39,15 +39,13 @@
             placeholder="••••••••" 
             required 
             autocomplete="current-password"
-            [disabled]="isLoading" />
-          <button 
-            type="button" 
-            class="toggle-password" 
-            (click)="togglePasswordVisibility()"
-            [disabled]="isLoading">
+            [disabled]="isLoading"
+            (blur)="passwordTouched = true" />
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" [disabled]="isLoading">
             <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
           </button>
         </div>
+        <div class="field-error" *ngIf="passwordError && (passwordTouched || attemptedLogin)">{{ passwordError }}</div>
       </div>
 
       <div class="error-message" *ngIf="error">
@@ -55,7 +53,7 @@
         <span>{{ error }}</span>
       </div>
 
-      <button type="submit" class="login-btn" [disabled]="isLoading">
+      <button type="submit" class="login-btn" [disabled]="isLoading || !canSubmit()">
         <span *ngIf="!isLoading">Giriş Yap</span>
         <span *ngIf="isLoading" class="loading-spinner">
           <i class="fas fa-spinner fa-spin"></i>

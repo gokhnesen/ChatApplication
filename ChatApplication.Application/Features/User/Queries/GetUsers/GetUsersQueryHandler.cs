@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ChatApplication.Application.Features.User.Queries.GetUsers
 {
-    public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, List<GetUsersResponse>>
+    public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, List<GetUsersQueryResponse>>
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<GetUsersQueryHandler> _logger;
@@ -28,7 +28,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
             _friendReadRepository = friendReadRepository;
         }
 
-        public async Task<List<GetUsersResponse>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
+        public async Task<List<GetUsersQueryResponse>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
                         else
                         {
                             // Hiç engellenen yoksa boş liste döndür
-                            return new List<GetUsersResponse>();
+                            return new List<GetUsersQueryResponse>();
                         }
                     }
                     // IncludeBlocked false ise veya null ise, engellenenleri çıkar (varsayılan davranış)
@@ -75,7 +75,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
                 {
                     // ExcludeUserId yoksa ve OnlyBlocked true ise boş liste döndür
                     _logger.LogWarning("OnlyBlocked true ancak ExcludeUserId belirtilmemiş");
-                    return new List<GetUsersResponse>();
+                    return new List<GetUsersQueryResponse>();
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -111,7 +111,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
 
                 _logger.LogInformation("Toplam {Count} kullanıcı bulundu", users.Count);
 
-                return users.Select(u => new GetUsersResponse
+                return users.Select(u => new GetUsersQueryResponse
                 {
                     Id = u.Id,
                     Name = u.Name,
@@ -125,7 +125,7 @@ namespace ChatApplication.Application.Features.User.Queries.GetUsers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Kullanıcıları getirirken hata oluştu");
-                return new List<GetUsersResponse>();
+                return new List<GetUsersQueryResponse>();
             }
         }
     }

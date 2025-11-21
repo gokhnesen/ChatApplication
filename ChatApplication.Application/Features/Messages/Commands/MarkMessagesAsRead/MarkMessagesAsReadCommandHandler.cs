@@ -4,18 +4,18 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
-public class MarkMessagesAsReadHandler : IRequestHandler<MarkMessagesAsReadCommand, MarkMessagesAsReadResponse>
+public class MarkMessagesAsReadCommandHandler : IRequestHandler<MarkMessagesAsReadCommand, MarkMessagesAsReadCommandResponse>
 {
     private readonly IMessageWriteRepository _messageWriteRepository;
     private readonly IMessageReadRepository _messageReadRepository;
     private readonly IHubContext<ChatHub> _hubContext;
-    private readonly ILogger<MarkMessagesAsReadHandler> _logger;
+    private readonly ILogger<MarkMessagesAsReadCommandHandler> _logger;
 
-    public MarkMessagesAsReadHandler(
+    public MarkMessagesAsReadCommandHandler(
         IMessageWriteRepository messageWriteRepository,
         IMessageReadRepository messageReadRepository,
         IHubContext<ChatHub> hubContext,
-        ILogger<MarkMessagesAsReadHandler> logger)
+        ILogger<MarkMessagesAsReadCommandHandler> logger)
     {
         _messageWriteRepository = messageWriteRepository;
         _messageReadRepository = messageReadRepository;
@@ -23,7 +23,7 @@ public class MarkMessagesAsReadHandler : IRequestHandler<MarkMessagesAsReadComma
         _logger = logger;
     }
 
-    public async Task<MarkMessagesAsReadResponse> Handle(MarkMessagesAsReadCommand request, CancellationToken cancellationToken)
+    public async Task<MarkMessagesAsReadCommandResponse> Handle(MarkMessagesAsReadCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -42,7 +42,7 @@ public class MarkMessagesAsReadHandler : IRequestHandler<MarkMessagesAsReadComma
             await _hubContext.Clients.User(request.UserId)
                 .SendAsync("UpdateUnreadMessageCount", remainingUnreadCount);
 
-            return new MarkMessagesAsReadResponse
+            return new MarkMessagesAsReadCommandResponse
             {
                 IsSuccess = true,
                 Message = "Mesajlar okundu olarak i?aretlendi.",
@@ -52,7 +52,7 @@ public class MarkMessagesAsReadHandler : IRequestHandler<MarkMessagesAsReadComma
         catch (Exception ex)
         {
             _logger.LogError(ex, "Mesajlar? okundu olarak i?aretlerken hata olu?tu");
-            return new MarkMessagesAsReadResponse
+            return new MarkMessagesAsReadCommandResponse
             {
                 IsSuccess = false,
                 Message = "??lem s?ras?nda bir hata olu?tu.",

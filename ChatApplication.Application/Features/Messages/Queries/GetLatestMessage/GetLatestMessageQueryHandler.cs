@@ -5,20 +5,20 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApplication.Application.Features.Messages.Queries.GetLatestMessage
 {
-    public class GetLatestMessageHandler : IRequestHandler<GetLatestMessageQuery, GetLatestMessageResponse>
+    public class GetLatestMessageQueryHandler : IRequestHandler<GetLatestMessageQuery, GetLatestMessageQueryResponse>
     {
         private readonly IMessageReadRepository _messageReadRepository;
-        private readonly ILogger<GetLatestMessageHandler> _logger;
+        private readonly ILogger<GetLatestMessageQueryHandler> _logger;
 
-        public GetLatestMessageHandler(
+        public GetLatestMessageQueryHandler(
             IMessageReadRepository messageReadRepository,
-            ILogger<GetLatestMessageHandler> logger)
+            ILogger<GetLatestMessageQueryHandler> logger)
         {
             _messageReadRepository = messageReadRepository;
             _logger = logger;
         }
 
-        public async Task<GetLatestMessageResponse> Handle(GetLatestMessageQuery request, CancellationToken cancellationToken)
+        public async Task<GetLatestMessageQueryResponse> Handle(GetLatestMessageQuery request, CancellationToken cancellationToken)
         {
             try
             {
@@ -29,10 +29,10 @@ namespace ChatApplication.Application.Features.Messages.Queries.GetLatestMessage
 
                 if (latestMessage == null)
                 {
-                    return new GetLatestMessageResponse { HasMessage = false };
+                    return new GetLatestMessageQueryResponse { HasMessage = false };
                 }
 
-                return new GetLatestMessageResponse
+                return new GetLatestMessageQueryResponse
                 {
                     Id = latestMessage.Id.ToString(),
                     SenderId = latestMessage.SenderId,
@@ -50,7 +50,7 @@ namespace ChatApplication.Application.Features.Messages.Queries.GetLatestMessage
             catch (Exception ex)
             {
                 _logger.LogError(ex, "En son mesaj getirilirken hata oluştu");
-                return new GetLatestMessageResponse { HasMessage = false };
+                return new GetLatestMessageQueryResponse { HasMessage = false };
             }
         }
     }

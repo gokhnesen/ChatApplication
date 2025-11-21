@@ -11,23 +11,23 @@ using System.Threading.Tasks;
 
 namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 {
-    public class UnBlockFriendOrUserHandler : IRequestHandler<UnBlockFriendOrUserCommand, UnBlockFriendOrUserResponse>
+    public class UnBlockFriendOrUserCommandHandler : IRequestHandler<UnBlockFriendOrUserCommand, UnBlockFriendOrUserCommandResponse>
     {
         private readonly IFriendReadRepository _friendReadRepository;
         private readonly IFriendWriteRepository _friendWriteRepository;
-        private readonly ILogger<UnBlockFriendOrUserHandler> _logger;
+        private readonly ILogger<UnBlockFriendOrUserCommandHandler> _logger;
 
-        public UnBlockFriendOrUserHandler(
+        public UnBlockFriendOrUserCommandHandler(
             IFriendReadRepository friendReadRepository,
             IFriendWriteRepository friendWriteRepository,
-            ILogger<UnBlockFriendOrUserHandler> logger)
+            ILogger<UnBlockFriendOrUserCommandHandler> logger)
         {
             _friendReadRepository = friendReadRepository;
             _friendWriteRepository = friendWriteRepository;
             _logger = logger;
         }
 
-        public async Task<UnBlockFriendOrUserResponse> Handle(UnBlockFriendOrUserCommand request, CancellationToken cancellationToken)
+        public async Task<UnBlockFriendOrUserCommandResponse> Handle(UnBlockFriendOrUserCommand request, CancellationToken cancellationToken)
         {
             try
             {
@@ -37,7 +37,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 
                 if (friendship == null)
                 {
-                    return new UnBlockFriendOrUserResponse
+                    return new UnBlockFriendOrUserCommandResponse
                     {
                         IsSuccess = false,
                         Message = "Engelleme kaydı bulunamadı."
@@ -46,7 +46,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 
                 if (friendship.Status != FriendStatus.Engellendi)
                 {
-                    return new UnBlockFriendOrUserResponse
+                    return new UnBlockFriendOrUserCommandResponse
                     {
                         IsSuccess = false,
                         Message = "Kullanıcı engellenmemiş."
@@ -55,7 +55,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 
                 if (friendship.SenderId != request.BlockerId)
                 {
-                    return new UnBlockFriendOrUserResponse
+                    return new UnBlockFriendOrUserCommandResponse
                     {
                         IsSuccess = false,
                         Message = "Bu engellemeyi kaldıramazsınız."
@@ -65,7 +65,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
                 _friendWriteRepository.Remove(friendship);
                 await _friendWriteRepository.SaveAsync();
 
-                return new UnBlockFriendOrUserResponse
+                return new UnBlockFriendOrUserCommandResponse
                 {
                     IsSuccess = true,
                     Message = "Engel başarıyla kaldırıldı."
@@ -74,7 +74,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Engel kaldırılırken hata oluştu");
-                return new UnBlockFriendOrUserResponse
+                return new UnBlockFriendOrUserCommandResponse
                 {
                     IsSuccess = false,
                     Message = "İşlem sırasında bir hata oluştu.",

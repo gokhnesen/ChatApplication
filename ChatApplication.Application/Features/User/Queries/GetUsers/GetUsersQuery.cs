@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ChatApplication.Application.Features.User.Queries.GetUsers
 {
-    public class GetUsersQuery : IRequest<List<GetUsersResponse>>
+    public class GetUsersQuery : IRequest<List<GetUsersQueryResponse>>
     {
         public string? SearchTerm { get; set; }
         public string? ExcludeUserId { get; set; }

@@ -5,20 +5,20 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApplication.Application.Features.User.Commands.UpdateUserProfile
 {
-    public class UpdateUserProfileHandler : IRequestHandler<UpdateUserProfileCommand, UpdateUserProfileResponse>
+    public class UpdateUserProfileCommandHandler : IRequestHandler<UpdateUserProfileCommand, UpdateUserProfileCommandResponse>
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ILogger<UpdateUserProfileHandler> _logger;
+        private readonly ILogger<UpdateUserProfileCommandHandler> _logger;
 
-        public UpdateUserProfileHandler(
+        public UpdateUserProfileCommandHandler(
             UserManager<ApplicationUser> userManager,
-            ILogger<UpdateUserProfileHandler> logger)
+            ILogger<UpdateUserProfileCommandHandler> logger)
         {
             _userManager = userManager;
             _logger = logger;
         }
 
-        public async Task<UpdateUserProfileResponse> Handle(UpdateUserProfileCommand request, CancellationToken cancellationToken)
+        public async Task<UpdateUserProfileCommandResponse> Handle(UpdateUserProfileCommand request, CancellationToken cancellationToken)
         {
           
                 _logger.LogInformation("Kullanıcı profili güncelleniyor: {UserId}", request.UserId);
@@ -45,7 +45,7 @@ namespace ChatApplication.Application.Features.User.Commands.UpdateUserProfile
                 {
                     _logger.LogInformation("Kullanıcı profili başarıyla güncellendi - ID: {Id}", user.Id);
                     
-                    return new UpdateUserProfileResponse
+                    return new UpdateUserProfileCommandResponse
                     {
                         Id = user.Id,
                         Name = user.Name,
@@ -63,7 +63,7 @@ namespace ChatApplication.Application.Features.User.Commands.UpdateUserProfile
 
                 }
 
-                return new UpdateUserProfileResponse();
+                return new UpdateUserProfileCommandResponse();
 
 
         }

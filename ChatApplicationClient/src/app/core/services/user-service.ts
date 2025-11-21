@@ -127,10 +127,12 @@ export class UserService {
   }
 
   externalLogin(provider: 'Google' | 'Microsoft') {
-  // Mevcut tarayıcı penceresini backend'in auth endpointine yönlendiriyoruz.
-  // returnUrl: İşlem bitince Backend'in bizi geri göndereceği Angular rotası.
   const returnUrl = `${window.location.origin}/login-callback`; 
   window.location.href = `${this.apiUrl}/User/external-login?provider=${provider}&returnUrl=${returnUrl}`;
 }
+
+  changePassword(payload: { currentPassword: string; newPassword: string }) {
+    return this.httpClient.post<any>(`${this.apiUrl}/User/change-password`, payload, { withCredentials: true });
+  }
 
 }
