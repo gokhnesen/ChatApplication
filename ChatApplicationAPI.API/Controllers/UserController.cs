@@ -1,4 +1,5 @@
-﻿using ChatApplication.Application.Features.User.Commands.Register;
+﻿using ChatApplication.Application.Features.User.Commands.ChangePassword;
+using ChatApplication.Application.Features.User.Commands.Register;
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
@@ -300,6 +301,38 @@ namespace ChatApplicationAPI.API.Controllers
             return Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
         }
 
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new
+                    {
+                        IsSuccess = false,
+                        Message = "Kullanıcı girişi yapılmamış."
+                    });
+                }
+
+                command.UserId = userId;
+
+                var response = await Mediator.Send(command);
+                return response.IsSuccess ? Ok(response) : BadRequest(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = "Sunucu hatası oluştu.",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+        }
 
     }
 }

@@ -17,7 +17,7 @@ interface SearchUser {
   userName: string;
   friendCode: string;
   profilePhotoUrl: string | null;
-  friendshipStatus?: 'none' | 'pending' | 'friend'; // Backend'den gelebilir
+  friendshipStatus?: 'none' | 'pending' | 'friend';
 }
 
 @Component({
@@ -31,6 +31,8 @@ export class AddFriends implements OnInit, OnDestroy {
   searchText: string = '';
   users: SearchUser[] = [];
   isLoading: boolean = false;
+  searchError: string = ''; // yeni
+
   private searchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
   private lastSearchTerm = '';
@@ -39,12 +41,15 @@ export class AddFriends implements OnInit, OnDestroy {
   private loadingIds = new Set<string>();
   private profilePhotoPipe = new ProfilePhotoPipe();
 
+  // izin verilen karakterler: harfler, rakamlar ve boşluk
+  private allowedPattern = /^[\p{L}\p{N}\s]*$/u;
+
   constructor(
     private userService: UserService,
     private friendService: FriendService,
     private router: Router,
     private route: ActivatedRoute,
-    private notificationService: NotificationService // EKLE
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -68,10 +73,18 @@ export class AddFriends implements OnInit, OnDestroy {
         switchMap(searchTerm => {
           const term = searchTerm.trim();
           this.lastSearchTerm = term;
+          // VALIDASYON: en az 2 karakter gerekli
           if (term.length === 0) {
+            this.searchError = '';
             this.users = [];
             return of([]);
           }
+          if (term.length < 2) {
+            this.searchError = 'Lütfen en az 2 karakter girin.';
+            this.users = [];
+            return of([]);
+          }
+          this.searchError = '';
           this.isLoading = true;
           return this.userService.searchUsers(term);
         })
@@ -82,8 +95,6 @@ export class AddFriends implements OnInit, OnDestroy {
             const term = this.normalize(this.lastSearchTerm);
             const data: SearchUser[] = response.data || [];
             this.users = data.filter(u => this.isExactMatch(u, term));
-            
-            // Backend'den gelen friendship durumlarını kontrol et
             this.users.forEach(user => {
               if (user.friendshipStatus === 'pending') {
                 this.requestedIds.add(user.id);
@@ -91,6 +102,8 @@ export class AddFriends implements OnInit, OnDestroy {
                 this.myFriendIds.add(user.id);
               }
             });
+            // ekstra pending kontrolü
+            this.checkPendingRequestsForUsers();
           } else {
             this.users = [];
           }
@@ -133,7 +146,70 @@ export class AddFriends implements OnInit, OnDestroy {
     this.searchSubject.complete();
   }
 
+  // helper: özel karakter kontrolü (Unicode harf/sayı/boşluk dışındakileri reddeder)
+  private containsInvalidChars(text: string): boolean {
+    if (!text) return false;
+    // Unicode property escape: tüm dillerdeki harfler ve sayılar ile boşluğu izin ver
+    return /[^\p{L}\p{N}\s]/u.test(text);
+  }
+
+  onSearchKeydown(ev: KeyboardEvent): void {
+    const k = ev.key;
+
+    const controlKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter','Home','End','Escape'];
+    if (controlKeys.includes(k)) return;
+
+    if (k.length === 1 && !this.allowedPattern.test(k)) {
+      ev.preventDefault();
+      this.searchError = 'Özel karakter kullanmayın.';
+      setTimeout(() => { if (this.searchError === 'Özel karakter kullanmayın.') this.searchError = ''; }, 2000);
+    }
+  }
+
+  onSearchPaste(ev: ClipboardEvent): void {
+    ev.preventDefault();
+    const text = ev.clipboardData?.getData('text/plain') || '';
+    const sanitized = Array.from(text).filter(ch => this.allowedPattern.test(ch)).join('').slice(0, 10);
+    if (!sanitized || sanitized.length === 0) {
+      this.searchError = 'Yapıştırılan içerikte geçersiz karakterler var.';
+      setTimeout(() => { this.searchError = ''; }, 2500);
+      return;
+    }
+    this.searchText = sanitized;
+    this.onSearchChange();
+  }
+
   onSearchChange(): void {
+    const raw = (this.searchText || '');
+    const cleaned = Array.from(raw).filter(ch => this.allowedPattern.test(ch)).join('').slice(0, 10);
+    if (cleaned !== raw) {
+      this.searchText = cleaned;
+      this.searchError = 'Geçersiz karakterler otomatik olarak kaldırıldı.';
+      setTimeout(() => { if (this.searchError === 'Geçersiz karakterler otomatik olarak kaldırıldı.') this.searchError = ''; }, 1800);
+    }
+
+    // mevcut kontroller (uzunluk, özel karakter, min 2) devam eder
+    if (this.searchText.length > 10) {
+      this.searchError = 'En fazla 10 karakter girebilirsiniz.';
+      this.users = [];
+      return;
+    }
+
+    const trimmed = this.searchText.trim();
+
+    if (trimmed.length === 0) {
+      this.searchError = '';
+      this.users = [];
+      this.searchSubject.next(this.searchText);
+      return;
+    }
+    if (trimmed.length < 2) {
+      this.searchError = 'Lütfen en az 2 karakter girin.';
+      this.users = [];
+      return;
+    }
+
+    this.searchError = '';
     this.searchSubject.next(this.searchText);
   }
 

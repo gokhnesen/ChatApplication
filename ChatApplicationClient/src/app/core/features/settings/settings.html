@@ -30,9 +30,18 @@
         </div>
 
         <div class="profile-details">
-          <div class="detail-row" *ngIf="!isEditingProfile">
-            <label>Ad Soyad:</label>
-            <span>{{ currentUser?.name }} {{ currentUser?.lastName }}</span>
+        <div class="detail-row row-with-two-items" *ngIf="!isEditingProfile">
+            <div class="detail-group">
+              <label>Ad Soyad:</label>
+              <span>{{ currentUser?.name }} {{ currentUser?.lastName }}</span>
+            </div>
+
+            <div class="detail-group">
+              <label>Şifre:</label>
+              <div class="password-masked">
+                <span class="password-box" *ngFor="let _ of passwordMaskArray"></span>
+              </div>
+            </div>
           </div>
 
           <div class="detail-row" *ngIf="!isEditingProfile">
@@ -57,11 +66,18 @@
           <div class="edit-form" *ngIf="isEditingProfile">
             <div class="form-group">
               <label>Ad:</label>
-              <input type="text" [(ngModel)]="editForm.name" class="form-input" />
+              <input type="text" [(ngModel)]="editForm.name" class="form-input" (blur)="onNameBlur()" />
+              <div class="field-error" *ngIf="(nameTouched || attemptedSave) && hasNameError()">
+                <small *ngIf="CustomValidators?.notWhitespace ? false : false"> </small><!-- placeholder to avoid template diagnostics -->
+                <small *ngIf="CustomValidators ? hasNameError() : hasNameError()">İsim boş olamaz ve en az 2 karakter olmalı.</small>
+              </div>
             </div>
             <div class="form-group">
               <label>Soyad:</label>
-              <input type="text" [(ngModel)]="editForm.lastName" class="form-input" />
+              <input type="text" [(ngModel)]="editForm.lastName" class="form-input" (blur)="onLastNameBlur()" />
+              <div class="field-error" *ngIf="(lastNameTouched || attemptedSave) && hasLastNameError()">
+                <small>Soyad boş olamaz ve en az 2 karakter olmalı.</small>
+              </div>
             </div>
           </div>
 
@@ -69,6 +85,12 @@
             <button class="edit-btn" (click)="startEditProfile()" *ngIf="!isEditingProfile">
               Profili Düzenle
             </button>
+
+            <!-- Yeni: Şifre değiştir butonu -->
+            <button class="change-password-btn" (click)="openChangePasswordModal()" *ngIf="!isEditingProfile">
+              Şifre Değiştir
+            </button>
+
             <button class="save-btn" (click)="saveProfile()" *ngIf="isEditingProfile">
               Kaydet
             </button>
@@ -198,6 +220,52 @@
           <p>Sonuç bulunamadı</p>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ YENİ: Şifre Değiştir Modal -->
+<div class="change-password-modal" *ngIf="showChangePasswordModal" (click)="closeChangePasswordModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Şifre Değiştir</h3>
+      <button class="close-modal-btn" (click)="closeChangePasswordModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Mevcut Şifre</label>
+        <input type="password" [(ngModel)]="passwordForm.currentPassword" class="form-input" />
+        <div class="field-error" *ngIf="attemptedChange && hasCurrentPasswordError()">
+          <small>Mevcut şifre gerekli.</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Yeni Şifre</label>
+        <input type="password" [(ngModel)]="passwordForm.newPassword" class="form-input" />
+        <div class="field-error" *ngIf="attemptedChange && hasNewPasswordError()">
+          <small>Yeni şifre en az 8 karakter, büyük harf, küçük harf, sayı ve özel karakter içermelidir.</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Yeni Şifre (Tekrar)</label>
+        <input type="password" [(ngModel)]="passwordForm.confirmPassword" class="form-input" />
+        <div class="field-error" *ngIf="attemptedChange && !passwordsMatch()">
+          <small>Şifreler eşleşmiyor.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="save-btn" (click)="submitChangePassword()">Değiştir</button>
+      <button class="cancel-btn" (click)="closeChangePasswordModal()">İptal</button>
     </div>
   </div>
 </div>

@@ -2,7 +2,7 @@
 
 namespace ChatApplication.Application.Features.Messages.Queries.GetLatestMessage
 {
-    public class GetLatestMessageResponse
+    public class GetLatestMessageQueryResponse
     {
         public string? Id { get; set; }
         public string? SenderId { get; set; }

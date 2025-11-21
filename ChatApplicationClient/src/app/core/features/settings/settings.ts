@@ -5,6 +5,8 @@ import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { NotificationService } from '../../services/notification-service'; // EKLE
+import { AbstractControl } from '@angular/forms';
+import { CustomValidators } from '../../shared/validators/custom-validators';
 
 @Component({
   selector: 'app-settings',
@@ -39,6 +41,21 @@ export class Settings implements OnInit {
   // Profil fotoğrafı
   selectedFile: File | null = null;
   isUploadingPhoto = false;
+
+  // durum izleme - template ngModel için
+  nameTouched = false;
+  lastNameTouched = false;
+  attemptedSave = false;
+  CustomValidators: any;
+
+  // ------ Yeni: Şifre değiştirme modal ve form alanları
+  showChangePasswordModal = false;
+  passwordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+  attemptedChange = false;
 
   ngOnInit(): void {
     this.loadUserInfo();
@@ -168,7 +185,34 @@ export class Settings implements OnInit {
     this.editForm.lastName = this.currentUser.lastName;
   }
 
+  // blur eventleri (template'den çağır)
+  onNameBlur(): void { this.nameTouched = true; }
+  onLastNameBlur(): void { this.lastNameTouched = true; }
+
+  // alan hatası kontrolü (ngModel kullanımıyla CustomValidators çağırılır)
+  hasNameError(): boolean {
+    const control = { value: this.editForm.name } as AbstractControl;
+    const notWs = !!CustomValidators.notWhitespace(control);
+    const minLen = !!CustomValidators.minLength(2)(control);
+    return notWs || minLen;
+  }
+
+  hasLastNameError(): boolean {
+    const control = { value: this.editForm.lastName } as AbstractControl;
+    const notWs = !!CustomValidators.notWhitespace(control);
+    const minLen = !!CustomValidators.minLength(2)(control);
+    return notWs || minLen;
+  }
+
   saveProfile(): void {
+    this.attemptedSave = true;
+
+    // Validasyon (ngModel tabanlı)
+    if (this.hasNameError() || this.hasLastNameError()) {
+      this.notificationService.show('Lütfen isim ve soyadı alanlarını kontrol edin.', 'error');
+      return;
+    }
+
     const data = {
       userId: this.currentUser.id,
       name: this.editForm.name,
@@ -182,14 +226,17 @@ export class Settings implements OnInit {
           this.currentUser.name = this.editForm.name;
           this.currentUser.lastName = this.editForm.lastName;
           this.isEditingProfile = false;
-          alert('Profil güncellendi!');
+          this.attemptedSave = false;
+          this.nameTouched = false;
+          this.lastNameTouched = false;
+          this.notificationService.show('Profil güncellendi!', 'success');
         } else {
-          alert(response.message || 'Profil güncellenemedi.');
+          this.notificationService.show(response.message || 'Profil güncellenemedi.', 'error');
         }
       },
       error: (error) => {
         console.error('Profil güncelleme hatası:', error);
-        alert('Bir hata oluştu.');
+        this.notificationService.show('Bir hata oluştu.', 'error');
       }
     });
   }
@@ -259,5 +306,92 @@ export class Settings implements OnInit {
         alert('Arkadaşlık kodu kopyalandı!');
       });
     }
+  }
+
+  // ---------- Yeni: şifre gösterimi (kare sayısı)
+  // Backend password length sağlıyorsa kullanılır, yoksa varsayılan 8 gösterilir
+  get passwordMaskCount(): number {
+    return this.currentUser?.passwordLength ?? 8;
+  }
+  get passwordMaskArray(): any[] {
+    return new Array(this.passwordMaskCount);
+  }
+
+  // ---------- Yeni: Şifre değiştir modal kontrolleri
+  openChangePasswordModal(): void {
+    this.showChangePasswordModal = true;
+    this.passwordForm.currentPassword = '';
+    this.passwordForm.newPassword = '';
+    this.passwordForm.confirmPassword = '';
+    this.attemptedChange = false;
+  }
+
+  closeChangePasswordModal(): void {
+    this.showChangePasswordModal = false;
+    this.passwordForm.currentPassword = '';
+    this.passwordForm.newPassword = '';
+    this.passwordForm.confirmPassword = '';
+    this.attemptedChange = false;
+  }
+
+  private makeControl(value: any): AbstractControl {
+    // basit "sahte" AbstractControl nesnesi ngModel ile validasyon kullanımı için
+    return { value } as AbstractControl;
+  }
+
+  hasCurrentPasswordError(): boolean {
+    // zorunlu kontrol: boş olamaz
+    const val = this.passwordForm.currentPassword || '';
+    return val.trim().length === 0;
+  }
+
+  hasNewPasswordError(): boolean {
+    const control = this.makeControl(this.passwordForm.newPassword);
+    // passwordStrength dönerse hata objesi veya null
+    const res = CustomValidators.passwordStrength(8)(control as AbstractControl);
+    return !!res;
+  }
+
+  passwordsMatch(): boolean {
+    return this.passwordForm.newPassword === this.passwordForm.confirmPassword;
+  }
+
+  submitChangePassword(): void {
+    this.attemptedChange = true;
+
+    if (this.hasCurrentPasswordError()) {
+      this.notificationService.show('Mevcut şifre boş olamaz.', 'error');
+      return;
+    }
+
+    if (this.hasNewPasswordError()) {
+      this.notificationService.show('Yeni şifre güvenlik kurallarını sağlamıyor.', 'error');
+      return;
+    }
+
+    if (!this.passwordsMatch()) {
+      this.notificationService.show('Yeni şifre ve tekrarı eşleşmiyor.', 'error');
+      return;
+    }
+
+    const payload = {
+      currentPassword: this.passwordForm.currentPassword,
+      newPassword: this.passwordForm.newPassword
+    };
+
+    this.userService.changePassword(payload).subscribe({
+      next: (res) => {
+        if (res?.isSuccess !== false) {
+          this.notificationService.show('Şifre başarıyla değiştirildi.', 'success');
+          this.closeChangePasswordModal();
+        } else {
+          this.notificationService.show(res?.message || 'Şifre değiştirilemedi.', 'error');
+        }
+      },
+      error: (err) => {
+        console.error('Şifre değiştirme hatası:', err);
+        this.notificationService.show('Şifre değiştirilirken hata oluştu.', 'error');
+      }
+    });
   }
 }

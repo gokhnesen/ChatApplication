@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
 {
-    public class UnBlockFriendOrUserResponse
+    public class UnBlockFriendOrUserCommandResponse
     {
         public bool IsSuccess { get; set; }
         public string Message { get; set; } = string.Empty;
