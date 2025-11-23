@@ -1,4 +1,5 @@
 ﻿using ChatApplication.Application.Features.User.Commands.ChangePassword;
+using ChatApplication.Application.Features.User.Commands.DeleteUser;
 using ChatApplication.Application.Features.User.Commands.Register;
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
@@ -232,8 +233,6 @@ namespace ChatApplicationAPI.API.Controllers
             if (signInResult.Succeeded)
             {
                 // Zaten kayıtlı, cookie oluştu, yönlendir
-                // YÖNLENDİRME DÜZELTMESİ YAPILDI:
-                // Frontend'in cookie'yi kontrol etmesi için /login'e özel parametreyle yönlendir.
                 return Redirect($"https://localhost:4200/login?externalAuth=true");
             }
 
@@ -266,7 +265,9 @@ namespace ChatApplicationAPI.API.Controllers
                     Name = name,
                     LastName = surname,
                     FriendCode = GenerateFriendCode(), // Senin zorunlu alanın
-                    ProfilePhotoUrl = null,
+                    // Use default profile image URL path; ensure file exists at:
+                    // C:\Users\gokha\source\repos\ChatApplication\ChatApplication\ChatApplicationAPI.API\wwwroot\uploads\profiles\default.jpg
+                    ProfilePhotoUrl = "/uploads/profiles/default.jpg",
                     EmailConfirmed = true // Google'dan geldiyse onaylı sayabiliriz
                 };
 
@@ -287,10 +288,7 @@ namespace ChatApplicationAPI.API.Controllers
             // 6. Giriş yap (Cookie oluştur)
             await _signInManager.SignInAsync(user, isPersistent: true);
 
-
             // Frontend'e başarılı dönüş
-            // YÖNLENDİRME DÜZELTMESİ YAPILDI:
-            // Kullanıcıyı direkt chat ekranına değil, /login'e özel parametreyle yönlendiriyoruz.
             return Redirect("https://localhost:4200/login?externalAuth=true");
         }
 
@@ -333,6 +331,39 @@ namespace ChatApplicationAPI.API.Controllers
                 });
             }
         }
+        [HttpDelete("delete-account")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccount([FromBody] DeleteUserCommand command)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
+                }
 
+                command.UserId = userId;
+
+                var response = await Mediator.Send(command);
+                if (!response.IsSuccess)
+                {
+                    return BadRequest(response);
+                }
+
+                await _signInManager.SignOutAsync();
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    IsSuccess = false,
+                    Message = "Sunucu hatası oluştu.",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+        }
     }
 }

@@ -5,7 +5,6 @@ import { Chat } from './core/features/chat/chat';
 import { authGuard } from './core/guards/auth-guard';
 import { Main } from './core/layout/main/main';
 import { AddFriends } from './core/features/add-friends/add-friends';
-import { EditUser } from './core/features/edit-user/edit-user';
 import { Settings } from './core/features/settings/settings';
 
 export const routes: Routes = [
@@ -42,17 +41,6 @@ export const routes: Routes = [
                         component: Chat
                     }
                 ]
-            }
-        ]
-    },
-    {
-        path: 'edit-profile',
-        component: Main,
-        canActivate: [authGuard],
-        children: [
-            {
-                path: '',
-                component: EditUser
             }
         ]
     },

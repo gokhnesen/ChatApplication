@@ -4,4 +4,6 @@ export type User = {
     lastName: string;
     email: string;
     profilePhotoUrl?: string;
+    friendCode: string;
+    userName: string;
 }

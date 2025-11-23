@@ -24,6 +24,12 @@ export class UserService {
       const user = this.currentUser();
     });
   }
+  
+  deleteAccount(userId: string): Observable<any> {
+    const url = `${this.apiUrl}/User/delete-account`;
+    const body = { userId };
+    return this.httpClient.request<any>('delete', url, { body, withCredentials: true });
+  }
 
   register(values: any) {
     return this.httpClient.post(this.apiUrl + '/user/register', values, { withCredentials: true });

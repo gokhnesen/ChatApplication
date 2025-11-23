@@ -36,20 +36,7 @@
               <span>{{ currentUser?.name }} {{ currentUser?.lastName }}</span>
             </div>
 
-            <div class="detail-group">
-              <label>Şifre:</label>
-              <div class="password-masked">
-                <span class="password-box" *ngFor="let _ of passwordMaskArray"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="detail-row" *ngIf="!isEditingProfile">
-            <label>E-posta:</label>
-            <span>{{ currentUser?.email }}</span>
-          </div>
-
-          <div class="detail-row" *ngIf="!isEditingProfile">
+       <div class="detail-group" *ngIf="!isEditingProfile">
             <label>Arkadaşlık Kodu:</label>
             <div class="friend-code-row">
               <span class="friend-code">{{ currentUser?.friendCode || 'Yükleniyor...' }}</span>
@@ -62,6 +49,23 @@
               </button>
             </div>
           </div>
+          </div>
+
+        <div class="detail-row row-with-two-items" *ngIf="!isEditingProfile">
+            <div class="detail-group">
+              <label>Email:</label>
+              <span>{{ currentUser?.email }}</span>
+            </div>
+
+       <div class="detail-group" *ngIf="!isEditingProfile">
+            <label>Kullanıcı Adı:</label>
+      <div class="detail-group">
+              <span>{{ currentUser?.userName }}</span>
+            </div>
+          </div>
+          </div>
+
+   
 
           <div class="edit-form" *ngIf="isEditingProfile">
             <div class="form-group">
@@ -70,6 +74,10 @@
               <div class="field-error" *ngIf="(nameTouched || attemptedSave) && hasNameError()">
                 <small *ngIf="hasNameError()">İsim boş olamaz ve en az 2 karakter olmalı.</small>
               </div>
+            </div>
+            <div class="form-group">
+              <label>Kullanıcı Adı:</label>
+              <input type="text" [(ngModel)]="editForm.userName" class="form-input" />
             </div>
             <div class="form-group">
               <label>Soyad:</label>
@@ -90,6 +98,11 @@
               Şifre Değiştir
             </button>
 
+            <!-- Hesabı Sil (onaylı) -->
+            <button class="danger-btn" (click)="confirmDeleteAccount()" *ngIf="!isEditingProfile" title="Hesabı Sil">
+              Hesabı Sil
+            </button>
+
             <button class="save-btn" (click)="saveProfile()" *ngIf="isEditingProfile">
               Kaydet
             </button>
@@ -101,11 +114,9 @@
       </div>
     </div>
 
-    <!-- Engellenen Kullanıcılar -->
     <div class="settings-section">
       <div class="section-header">
         <h2>Engellenen Kullanıcılar</h2>
-        <!-- ✅ YENİ: Ekle butonu -->
         <button class="add-block-btn" (click)="openAddBlockModal()" title="Kullanıcı Engelle">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -311,6 +322,7 @@
         </div>
       </div>
 
+      <div class="form-group">
       <div class="form-group">
         <label>Yeni Şifre (Tekrar)</label>
         <div class="password-row">

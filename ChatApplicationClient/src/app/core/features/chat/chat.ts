@@ -51,6 +51,8 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private messageBroadcast = inject(MessageService);
   private notificationService = inject(NotificationService); // EKLE
   private subscriptions: Subscription[] = [];
+  private presenceSub: Subscription | null = null;
+  private presenceIntervalId: any = null;
   
   unreadCount: number = 0;
   private hasMarkedAsRead = false;
@@ -141,7 +143,43 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         this.setCurrentUserFromSignal(user);
       }
     });
+
+    // Presence aboneliği (SignalR'den gelen var/yok bildirimleri)
+    this.presenceSub = this.signalRService.presence$.subscribe(p => {
+      if (!p || !p.userId) return;
+      if (p.userId.startsWith('____')) return;
+      // log her presence güncellemesini burada da görebilirsiniz
+      console.log('[Chat] presence update received in component', p);
+      this.presenceMap[p.userId] = !!p.isOnline;
+      for (const m of this.messages) {
+        if (m.senderId === p.userId) {
+          // @ts-ignore
+          m.isOnline = !!p.isOnline;
+        }
+      }
+    });
   }
+
+  private presenceMap: Record<string, boolean> = {};
+
+isUserOnline(userId: string): boolean {
+  if (!userId) return false;
+
+  if (this.presenceMap.hasOwnProperty(userId)) {
+    return !!this.presenceMap[userId];
+  }
+
+  const friend = this.friendsList?.find(f => f.id === userId);
+  if (friend) {
+    return !!friend.isOnline;
+  }
+
+  const m = this.messages.find(x => x.senderId === userId);
+  // @ts-ignore
+  if (m && typeof m.isOnline !== 'undefined') return !!m.isOnline;
+
+  return false;
+}
 
   private loadFriendsList(): void {
     this.friendService.getMyFriends().subscribe({
@@ -165,11 +203,75 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           friends.push(aiFriend);
         }
         this.friendsList = friends;
+        // ilk durum sorgulamasını yap
+        this.startPresenceTracking();
       },
       error: (error) => {
         console.error('Arkadaş listesi yüklenemedi:', error);
       }
     });
+  }
+
+private startPresenceTracking(): void {
+  this.stopPresenceTracking();
+
+  this.presenceSub = this.signalRService.presence$.subscribe(payload => {
+    if (!payload || !payload.userId) return;
+
+    // A) RECONNECT / CLOSED KONTROLÜ
+    if (payload.userId === '____RECONNECTED____') {
+      this.checkFriendsPresence();
+      return;
+    }
+    if (payload.userId === '____CLOSED____') return;
+
+    const isOnline = !!payload.isOnline;
+
+    // B) PRESENCE MAP GÜNCELLEME (Header için kritik)
+    this.presenceMap[payload.userId] = isOnline;
+
+    // C) ARKADAŞ LİSTESİ GÜNCELLEME (Yan menü için kritik)
+    if (this.friendsList) {
+      const f = this.friendsList.find(x => x.id === payload.userId);
+      if (f) {
+        f.isOnline = isOnline;
+        f.lastSeen = isOnline ? null : (payload.lastSeen ? new Date(payload.lastSeen) : f.lastSeen);
+      }
+    }
+
+    // D) MESAJLARDAKİ DURUMU GÜNCELLEME (Opsiyonel)
+    this.messages.forEach(m => {
+        if (m.senderId === payload.userId) {
+            // @ts-ignore
+            m.isOnline = isOnline; 
+        }
+    });
+    
+    // Change Detection'ı tetiklemek gerekebilir (Eğer OnPush kullanıyorsanız)
+    // this.cdr.detectChanges(); 
+  });
+
+  // İlk açılışta toplu sorgu
+  this.checkFriendsPresence();
+  this.presenceIntervalId = setInterval(() => this.checkFriendsPresence(), 30_000);
+}
+
+  private stopPresenceTracking(): void {
+    if (this.presenceSub) {
+      this.presenceSub.unsubscribe();
+      this.presenceSub = null;
+    }
+    if (this.presenceIntervalId) {
+      clearInterval(this.presenceIntervalId);
+      this.presenceIntervalId = null;
+    }
+  }
+
+  private checkFriendsPresence(): void {
+    const ids = (this.friendsList || []).map(f => f.id).filter(Boolean);
+    if (ids.length === 0) return;
+    // toplu sorgu - signalr servisinde her id için IsUserOnline çağrısı yapıp presence$ yayımlanacak
+    this.signalRService.refreshPresence(ids).catch(err => console.error('presence refresh error', err));
   }
 
   private navigateToNextFriend(): void {
@@ -193,6 +295,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.presenceSub) { this.presenceSub.unsubscribe(); this.presenceSub = null; }
     this.stopCamera();
     this.stopVideoRecording();
     this.closeVideoRecorder();
@@ -970,10 +1073,10 @@ async blockUser() {
     }
   );
 }
+
 }
 
 
-// AI kullanıcı tanımı (kalıcı olarak arkadaş listesine eklenecek)
 const AI_USER = {
   id: 'ai-bot',
   name: 'Yapay Zeka',

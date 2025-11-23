@@ -289,11 +289,32 @@
             background: #374249;
           }
         }
+
+        .danger-btn {
+          background: #ea4335; /* kırmızı */
+          color: #fff;
+          padding: 0.8rem 1.5rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.95rem;
+          font-weight: 500;
+          transition: all 0.16s ease;
+
+          &:hover {
+            background: #d33426;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(211, 52, 38, 0.18);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
       }
     }
   }
 
-  // Engellenen Kullanıcılar
   .blocked-users-list {
     .blocked-user {
       display: flex;
@@ -872,7 +893,7 @@
   justify-content: space-between;
   padding: 18px 20px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
 }
 .modal-header h3 {
   margin: 0;
@@ -956,7 +977,7 @@
 .change-password-modal .close-modal-btn {
   color: #9aa9b2;
 }
-.change-password-modal .close-modal-btn:hover {
+.change-password_modal .close-modal-btn:hover {
   background: rgba(42,57,66,0.35);
   color: #e9edef;
 }

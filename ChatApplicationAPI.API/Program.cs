@@ -5,15 +5,8 @@ using ChatApplication.Domain.Entities;
 using ChatApplication.Persistence;
 using ChatApplication.Persistence.DbContext;
 using ChatApplication.Persistence.DbContext.Seed;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Threading.RateLimiting;
 
 namespace ChatApplicationAPI.API
 {
@@ -26,6 +19,9 @@ namespace ChatApplicationAPI.API
             // --- 1. Temel Servisler ---
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
+
+            // Register IHttpContextAccessor so handlers can access caller claims
+            builder.Services.AddHttpContextAccessor();
 
             // Swagger Ayarları
             builder.Services.AddSwaggerGen(c =>
@@ -80,50 +76,14 @@ namespace ChatApplicationAPI.API
                     microsoftOptions.SignInScheme = IdentityConstants.ExternalScheme;
                 });
 
-            // --- 3.5 Rate Limiter (Yeni) ---
-            // Global limiter partitioned by authenticated user id (or by IP for anonymous users).
-            builder.Services.AddRateLimiter(options =>
-            {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-                options.OnRejected = async (context, ct) =>
-                {
-                    var response = context.HttpContext.Response;
-                    response.ContentType = "application/json";
-                    response.StatusCode = StatusCodes.Status429TooManyRequests;
-                    var payload = JsonSerializer.Serialize(new { IsSuccess = false, Message = "Too many requests. Please try again later." });
-                    await response.WriteAsync(payload, ct);
-                };
-
-                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-                {
-                    // Use authenticated user id as partition key, fallback to IP
-                    var userId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-                    var partitionKey = !string.IsNullOrEmpty(userId)
-                        ? userId
-                        : httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-                    // Fixed window limiter: e.g., 60 requests per minute per partition
-                    return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 60,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        QueueLimit = 0 // no queuing
-                    });
-                });
-            });
-
-            // --- 4. Cookie Ayarları ---
-            // Identity cookie ayarlarını gevşetiyoruz (Localhost ve Cross-site için)
             builder.Services.ConfigureApplicationCookie(options =>
             {
-                options.Cookie.SameSite = SameSiteMode.Lax; // None yerine Lax genellikle daha stabildir
+                options.Cookie.SameSite = SameSiteMode.Lax;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.HttpOnly = true;
             });
 
-            // CORS Ayarları
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -139,12 +99,10 @@ namespace ChatApplicationAPI.API
 
             var app = builder.Build();
 
-            // Seed Data
             await AIFriendSeed.SeedAsync(app.Services);
 
-            // --- 5. Middleware Pipeline ---
 
-            // Geliştirme ortamında detaylı hata sayfası (500 yerine gerçek hatayı görmek için)
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage(); // ✅ Eklendi
@@ -156,23 +114,19 @@ namespace ChatApplicationAPI.API
                 app.MapOpenApi();
             }
 
-            // Routing must be enabled before UseRateLimiter when using endpoint-specific limiters.
             app.UseRouting();
 
-            // Apply CORS, HTTPS, static files, cookie policy etc.
             app.UseCors();
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
-            // ✅ Cookie Policy: Authentication'dan ÖNCE olmalı
             app.UseCookiePolicy(new CookiePolicyOptions
             {
                 MinimumSameSitePolicy = SameSiteMode.Lax,
                 Secure = CookieSecurePolicy.Always
             });
 
-            // Enable rate limiting middleware (global limiter configured above)
-            app.UseRateLimiter();
+            app.UseMiddleware<RateLimitMiddleware>();
 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -182,7 +136,6 @@ namespace ChatApplicationAPI.API
             app.MapControllers();
             app.MapHub<ChatHub>("/chathub");
 
-            // Identity API Endpoint'leri
             app.MapGroup("api").MapIdentityApi<ApplicationUser>();
 
             app.Run();

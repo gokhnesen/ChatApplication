@@ -9,17 +9,6 @@ import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 
-interface SearchUser {
-  id: string;
-  name: string;
-  lastName: string;
-  email: string;
-  userName: string;
-  friendCode: string;
-  profilePhotoUrl: string | null;
-  friendshipStatus?: 'none' | 'pending' | 'friend';
-}
-
 @Component({
   selector: 'app-add-friends',
   standalone: true,
@@ -29,7 +18,7 @@ interface SearchUser {
 })
 export class AddFriends implements OnInit, OnDestroy {
   searchText: string = '';
-  users: SearchUser[] = [];
+  users: any[] = [];
   isLoading: boolean = false;
   searchError: string = ''; // yeni
 
@@ -93,7 +82,7 @@ export class AddFriends implements OnInit, OnDestroy {
           this.isLoading = false;
           if (response && response.isSuccess) {
             const term = this.normalize(this.lastSearchTerm);
-            const data: SearchUser[] = response.data || [];
+            const data: any[] = response.data || [];
             this.users = data.filter(u => this.isExactMatch(u, term));
             this.users.forEach(user => {
               if (user.friendshipStatus === 'pending') {
@@ -217,7 +206,7 @@ export class AddFriends implements OnInit, OnDestroy {
     this.router.navigate([u.id], { relativeTo: this.route });
   }
 
-  addFriend(user: SearchUser): void {
+  addFriend(user: any): void {
     if (this.isAlreadyFriend(user)) { 
       this.notificationService.show('Zaten arkadaşsınız.', 'info');
       return; 
@@ -263,15 +252,13 @@ export class AddFriends implements OnInit, OnDestroy {
     });
   }
 
-  private isExactMatch(u: SearchUser, term: string): boolean {
-    const email = this.normalize(u.email);
+  private isExactMatch(u: any, term: string): boolean {
     const userName = this.normalize(u.userName);
     const friendCode = this.normalize(u.friendCode);
     const fullName = this.normalize(`${u.name} ${u.lastName}`);
     const fullNameAlt = this.normalize(`${u.lastName} ${u.name}`);
 
-    return email.includes(term)
-        || userName.includes(term)
+    return userName.includes(term)
         || friendCode.includes(term)
         || fullName.includes(term)
         || fullNameAlt.includes(term);
@@ -281,20 +268,20 @@ export class AddFriends implements OnInit, OnDestroy {
     return (text || '').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
   }
 
-  isAlreadyFriend(user: SearchUser): boolean {
+  isAlreadyFriend(user: any): boolean {
     const me = this.userService.currentUser();
     return (me && user.id === me.id) || this.myFriendIds.has(user.id);
   }
 
-  isRequesting(user: SearchUser): boolean {
+  isRequesting(user: any): boolean {
     return this.loadingIds.has(user.id);
   }
 
-  isRequestSent(user: SearchUser): boolean {
+  isRequestSent(user: any): boolean {
     return this.requestedIds.has(user.id);
   }
 
-  getUserAvatar(user: SearchUser): string {
+  getUserAvatar(user: any): string {
     return this.profilePhotoPipe.transform(user.profilePhotoUrl);
   }
 
