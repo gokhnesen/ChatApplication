@@ -3,11 +3,6 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ChatApplication.Application.Features.User.Commands.Register
 {
@@ -23,14 +18,13 @@ namespace ChatApplication.Application.Features.User.Commands.Register
         }
 
 
-
         public async Task<RegisterUserCommandResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
         {
             try
             {
-                _logger.LogInformation("Processing registration for email: {Email}, Name: {Name}", 
+                _logger.LogInformation("Processing registration for email: {Email}, Name: {Name}",
                     request?.Email ?? "null", request?.Name ?? "null");
-                    
+
                 if (request == null)
                 {
                     _logger.LogError("Registration request object is null");
@@ -53,27 +47,32 @@ namespace ChatApplication.Application.Features.User.Commands.Register
                     };
                 }
 
+                // If no profile photo provided, use default URL path (ensure default.jpg exists at wwwroot/uploads/profiles/default.jpg)
+                var profilePhotoUrl = string.IsNullOrWhiteSpace(request.ProfilePhotoUrl)
+                    ? "/uploads/profiles/default.jpg"
+                    : request.ProfilePhotoUrl;
+
                 var newUser = new ApplicationUser
                 {
                     UserName = request.Email,
                     Email = request.Email,
                     Name = request.Name ?? string.Empty,
                     LastName = request.LastName ?? string.Empty,
-                    ProfilePhotoUrl = request.ProfilePhotoUrl,
+                    ProfilePhotoUrl = profilePhotoUrl,
                     FriendCode = await GenerateUniqueFriendCodeAsync()
                 };
 
-                _logger.LogInformation("Creating user: {Email}, Name: {Name}, LastName: {LastName}", 
+                _logger.LogInformation("Creating user: {Email}, Name: {Name}, LastName: {LastName}",
                     newUser.Email, newUser.Name, newUser.LastName);
 
                 var result = await _userManager.CreateAsync(newUser, request.Password);
 
-                if(result.Succeeded)
+                if (result.Succeeded)
                 {
                     var createdUser = await _userManager.FindByEmailAsync(newUser.Email);
-                    
+
                     _logger.LogInformation("User created successfully - ID: {Id}", createdUser?.Id ?? "null");
-                    
+
                     return new RegisterUserCommandResponse
                     {
                         IsSuccess = true,
@@ -96,12 +95,12 @@ namespace ChatApplication.Application.Features.User.Commands.Register
             catch (Exception ex)
             {
 
-                _logger.LogError(ex, "Kullanıcı oluşturulurken beklenmeyen bir hata oluştu: {Message}", ex.Message);
+                _logger.LogError(ex, "Kullanıcı oluşturulırken beklenmeyen bir hata oluştu: {Message}", ex.Message);
                 if (ex.InnerException != null)
                 {
                     _logger.LogError("Inner exception: {Message}", ex.InnerException.Message);
                 }
-                
+
                 return new RegisterUserCommandResponse
                 {
                     IsSuccess = false,

@@ -1,13 +1,14 @@
 <div class="chat-container">
-  <!-- Chat header with recipient info -->
   <div class="chat-header" *ngIf="receiverUser">
-    <img [src]="receiverUser.profilePhotoUrl | profilePhoto" alt="Receiver avatar" class="header-avatar" />
+    <div class="header-avatar-wrapper">
+      <img [src]="receiverUser.profilePhotoUrl | profilePhoto" alt="Receiver avatar" class="header-avatar" />
+      <span class="header-presence-badge" [class.online]="isUserOnline(receiverUser.id)" [attr.title]="isUserOnline(receiverUser.id) ? 'Çevrimiçi' : 'Çevrimdışı'"></span>
+    </div>
     <div class="header-info">
       <h3>{{ receiverUser?.name }} {{ receiverUser?.lastName }}</h3>
       <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }} okunmamış</span>
     </div>
     
-    <!-- ✅ YENİ: Üç nokta menü butonu -->
     <div class="user-menu-wrapper">
       <button class="user-menu-btn" (click)="toggleUserMenu()" type="button">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -17,7 +18,6 @@
         </svg>
       </button>
 
-      <!-- ✅ YENİ: Dropdown menü -->
       <div class="user-menu-dropdown" *ngIf="showUserMenu">
         <button class="menu-item delete-item" (click)="removeFriend()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -43,7 +43,6 @@
       <div class="message-box" [class.own-message]="isOwnMessage(msg)">
         <div class="message-content">
           <div *ngIf="msg.type === MessageType.Image || msg.type === MessageType.File || msg.type === MessageType.Video">
-            <!-- Resim mesajı -->
             <div *ngIf="msg.type === MessageType.Image" class="message-image">
               <img 
                 [src]="msg.attachmentUrl | attachFile:'url'" 
@@ -65,7 +64,6 @@
               <p class="video-caption" *ngIf="msg.content !== msg.attachmentName">{{ msg.content }}</p>
             </div>
             
-            <!-- Dosya mesajı -->
             <div *ngIf="msg.type === MessageType.File" class="message-file">
               <a [href]="msg.attachmentUrl | attachFile:'url'" 
                  [download]="msg.attachmentName"
@@ -84,25 +82,17 @@
             </div>
           </div>
 
-          <!-- NORMAL METIN MESAJI -->
           <div *ngIf="msg.type === MessageType.Text" class="message-text">{{ msg.content }}</div>
           
           <div class="message-footer">
-            <small class="message-time">{{ msg.sentAt | date:'short' }}</small>
-            <span class="read-indicator" *ngIf="isOwnMessage(msg)">
-              <i [class]="msg.isRead ? 'read-icon' : 'unread-icon'">
-                {{ msg.isRead ? '✓✓' : '✓' }}
-              </i>
-            </span>
+            <small class="message-time">{{ msg.sentAt | date:'dd/MM/yyyy HH:mm':'Europe/Istanbul' }}</small>
           </div>
         </div>
       </div>
     </ng-container>
   </div>
 
-  <!-- Message input form -->
   <form (ngSubmit)="sendMessage()" class="chat-form">
-    <!-- Emoji Picker -->
     <div class="emoji-picker-wrapper" *ngIf="showEmojiPicker">
       <emoji-mart 
         (emojiClick)="addEmoji($event)"
@@ -115,23 +105,19 @@
       </emoji-mart>
     </div>
 
-    <!-- Dosya önizleme -->
     <div class="file-preview" *ngIf="selectedFile">
       <div class="preview-container">
-        <!-- Resim önizleme -->
         <img *ngIf="selectedFilePreview && selectedFile.type.startsWith('image/')" 
              [src]="selectedFilePreview" 
              alt="Preview" 
              class="preview-image">
         
-        <!-- Video önizleme -->
         <video *ngIf="selectedFilePreview && selectedFile.type.startsWith('video/')"
                [src]="selectedFilePreview"
                controls
                class="preview-video">
         </video>
         
-        <!-- Diğer dosya önizleme -->
         <div *ngIf="!selectedFilePreview || (!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/'))" 
              class="preview-file">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -151,7 +137,6 @@
     </div>
 
     <div class="input-wrapper">
-      <!-- Video kayıt butonu -->
       <button 
         type="button" 
         class="video-btn" 

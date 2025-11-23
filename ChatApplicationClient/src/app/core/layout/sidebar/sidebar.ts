@@ -69,10 +69,6 @@ export class Sidebar {
     this.router.navigate(['/friend-requests']);
   }
 
-  navigateToProfile(): void {
-    this.router.navigate(['/edit-profile']);
-  }
-
   navigateToSettings(): void {
     this.router.navigate(['/settings']);
   }

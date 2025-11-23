@@ -42,7 +42,6 @@ namespace ChatApplication.Application.Features.User.Commands.ChangePassword
                     };
                 }
 
-                // E?er kullan?c? daha önce parola belirlemediyse AddPasswordAsync
                 var hasPassword = await _userManager.HasPasswordAsync(user);
 
                 IdentityResult result;
@@ -61,7 +60,6 @@ namespace ChatApplication.Application.Features.User.Commands.ChangePassword
                 }
                 else
                 {
-                    // Kullan?c? external login ile olu?turulmu? ve ?ifresi yoksa yeni ?ifre ekle
                     result = await _userManager.AddPasswordAsync(user, request.NewPassword);
                 }
 

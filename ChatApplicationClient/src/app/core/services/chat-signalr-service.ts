@@ -1,13 +1,16 @@
 import { Injectable } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { MessageType } from '../shared/models/message';
+import { Subject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatSignalrService {
   private hubConnection?: signalR.HubConnection;
-
+  private presenceSubject = new Subject<{ userId: string; isOnline: boolean; lastSeen?: string | null }>();
+  public presence$ = this.presenceSubject.asObservable();
+ 
   startConnection(userId: string): void {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
       return;
@@ -25,7 +28,45 @@ export class ChatSignalrService {
 
     this.hubConnection
       .start()
-      .catch(() => {});
+      .then(() => {
+        console.log('[SignalR] connected to hub');
+      })
+      .catch((err) => {
+        console.error('[SignalR] connection error', err);
+      });
+ 
+    // Sunucudan doğrudan yayınları dinle ve logla
+    this.hubConnection.on('PresenceUpdated', (payload: { userId: string; isOnline: boolean; lastSeen?: string }) => {
+      try {
+        console.log('[SignalR] PresenceUpdated', payload);
+        this.presenceSubject.next({ userId: payload.userId, isOnline: !!payload.isOnline, lastSeen: payload.lastSeen ?? null });
+      } catch (e) {
+        console.error('[SignalR] PresenceUpdated handler error', e);
+      }
+    });
+  }
+
+  // Sorgu: hub'da IsUserOnline(string userId) varsa kullanılır
+  isUserOnline(userId: string): Promise<boolean> {
+    if (!this.hubConnection || this.hubConnection.state !== signalR.HubConnectionState.Connected) {
+      return Promise.resolve(false);
+    }
+    return this.hubConnection.invoke<boolean>('IsUserOnline', userId).catch(() => false);
+  }
+  
+  // Toplu sorgu helper (kullanıcı arrayine durum yayınlamak için)
+  async refreshPresence(userIds: string[]): Promise<void> {
+    if (!userIds || userIds.length === 0) return;
+    for (const id of userIds) {
+      try {
+        const online = await this.isUserOnline(id);
+        console.log('[SignalR] refreshPresence', { userId: id, isOnline: online });
+        this.presenceSubject.next({ userId: id, isOnline: online, lastSeen: online ? null : null });
+      } catch {
+        console.warn('[SignalR] refreshPresence failed for', id);
+        this.presenceSubject.next({ userId: id, isOnline: false, lastSeen: null });
+      }
+    }
   }
 
   // ✅ GÜNCELLENECEK - Attachment bilgilerini ekle

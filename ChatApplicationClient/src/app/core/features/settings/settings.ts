@@ -7,6 +7,7 @@ import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { NotificationService } from '../../services/notification-service'; // EKLE
 import { AbstractControl } from '@angular/forms';
 import { CustomValidators } from '../../shared/validators/custom-validators';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
@@ -19,6 +20,7 @@ export class Settings implements OnInit {
   private userService = inject(UserService);
   private friendService = inject(FriendService);
   private notificationService = inject(NotificationService); // EKLE
+  private router = inject(Router);
 
   currentUser: any = null;
   blockedUsers: any[] = [];
@@ -35,7 +37,8 @@ export class Settings implements OnInit {
   isEditingProfile = false;
   editForm = {
     name: '',
-    lastName: ''
+    lastName: '',
+    userName: ''
   };
 
   // Profil fotoğrafı
@@ -73,12 +76,14 @@ export class Settings implements OnInit {
       this.currentUser = user;
       this.editForm.name = user.name;
       this.editForm.lastName = user.lastName;
+      this.editForm.userName = user.userName;
     } else {
       this.userService.getUserInfo().subscribe({
         next: (user) => {
           this.currentUser = user;
           this.editForm.name = user.name;
           this.editForm.lastName = user.lastName;
+          this.editForm.userName = user.userName;
         }
       });
     }
@@ -100,7 +105,6 @@ export class Settings implements OnInit {
     });
   }
 
-  // ✅ YENİ: Arkadaş ekleme modalını aç
   openAddBlockModal(): void {
     this.showAddBlockModal = true;
     this.searchFriendText = '';
@@ -188,6 +192,7 @@ export class Settings implements OnInit {
     this.isEditingProfile = false;
     this.editForm.name = this.currentUser.name;
     this.editForm.lastName = this.currentUser.lastName;
+    this.editForm.userName = this.currentUser.userName;
   }
 
   // blur eventleri (template'den çağır)
@@ -222,7 +227,8 @@ export class Settings implements OnInit {
       userId: this.currentUser.id,
       name: this.editForm.name,
       lastName: this.editForm.lastName,
-      profilePhotoUrl: this.currentUser.profilePhotoUrl
+      profilePhotoUrl: this.currentUser.profilePhotoUrl,
+      userName: this.editForm.userName
     };
 
     this.userService.updateProfile(data).subscribe({
@@ -421,5 +427,48 @@ export class Settings implements OnInit {
         console.error('changePassword error', err);
       }
     });
+  }
+
+  // Hesap silme onayı + işlem
+  confirmDeleteAccount(): void {
+    const userId = this.currentUser?.userId ?? this.currentUser?.id ?? this.currentUser?.userID ?? null;
+    if (!userId) {
+      this.notificationService.show('Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.', 'error');
+      return;
+    }
+
+    this.notificationService.show(
+      'Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+      'confirm',
+      {
+        action: () => {
+          this.userService.deleteAccount(userId).subscribe({
+            next: (res) => {
+              if (res?.isSuccess !== false) {
+                // temizle ve yönlendir
+                this.notificationService.show(res?.message ?? 'Hesabınız silindi.', 'success');
+                // temiz oturum işlemleri
+                this.userService.logout().subscribe({
+                  next: () => {
+                    // yönlendir
+                    this.router.navigate(['/login']).catch(() => { window.location.href = '/'; });
+                  },
+                  error: () => {
+                    window.location.href = '/';
+                  }
+                });
+              } else {
+                this.notificationService.show(res?.message || 'Hesap silinemedi.', 'error');
+              }
+            },
+            error: (err) => {
+              console.error('deleteAccount error', err);
+              const msg = err?.error?.message || 'Hesap silme sırasında hata oluştu.';
+              this.notificationService.show(msg, 'error');
+            }
+          });
+        }
+      }
+    );
   }
 }

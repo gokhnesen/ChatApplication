@@ -30,11 +30,11 @@ namespace ChatApplication.Application.Features.User.Commands.UpdateUserProfile
 
                 }
 
-                // Kullanıcı özelliklerini güncelle
                 user.Name = request.Name ?? string.Empty;
                 user.LastName = request.LastName ?? string.Empty;
-                
-                if (!string.IsNullOrEmpty(request.ProfilePhotoUrl))
+                user.UserName = request.UserName ?? string.Empty;
+
+            if (!string.IsNullOrEmpty(request.ProfilePhotoUrl))
                 {
                     user.ProfilePhotoUrl = request.ProfilePhotoUrl;
                 }
@@ -52,7 +52,8 @@ namespace ChatApplication.Application.Features.User.Commands.UpdateUserProfile
                         LastName = user.LastName,
                         Email = user.Email ?? string.Empty,
                         ProfilePhotoUrl = user.ProfilePhotoUrl,
-                        FriendCode = user.FriendCode
+                        FriendCode = user.FriendCode,
+                        UserName = user.UserName
                     };
                 }
                 else

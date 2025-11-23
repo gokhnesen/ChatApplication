@@ -35,6 +35,7 @@
 
   .header-info {
     flex: 1;
+    padding-left: 10px;
 
     h3 {
       margin: 0;
@@ -1113,13 +1114,82 @@
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
+/* presence badge - header */
+.header-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+}
+.header-avatar-wrapper .header-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.header-presence-badge {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #95a5a6; /* Gri renk */
+  border: 2px solid white; /* Avatarın üzerine biniyorsa kenarlık */
+  position: absolute; /* Avatar wrapper içinde konumlandırmak için */
+  bottom: 0;
+  right: 0;
+  transition: background-color 0.3s ease;
+}
+
+.header-presence-badge.online {
+  background-color: #2ecc71; /* Canlı yeşil renk */
+}
+
+/* presence badge - message avatar */
+.message-avatar-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: top;
+}
+.message-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 2px solid rgba(0,0,0,0.12);
+}
+.message-presence-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9aa4a6;
+  border: 2px solid rgba(11,20,26,1);
+  transition: background .12s ease;
+}
+.message-presence-badge.online { background: #35c759; }
+.message-presence-badge.online::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: rgba(53,199,89,0.12);
+  animation: presencePulse 1.6s infinite;
+  z-index: -1;
+}
+
+@keyframes presencePulse {
+  0% { transform: scale(0.6); opacity: 0.6; }
+  50% { transform: scale(1); opacity: 0.18; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 
 @keyframes fadeIn {
@@ -1140,4 +1210,83 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 52px;
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(0,0,0,0.12);
+  }
+
+  .presence-badge {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #9aa4a6; /* gri - offline */
+    border: 2px solid #0b1416; /* avatar kenarıyla uyum */
+    box-shadow: 0 0 0 rgba(0,0,0,0.2);
+    transition: background .12s ease, transform .12s ease;
+    &.online {
+      background: #35c759; /* yeşil - online */
+      /* küçük pulse */
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        background: rgba(53,199,89,0.12);
+        animation: presencePulse 1.6s infinite;
+      }
+    }
+  }
+}
+
+
+  .message-presence-badge {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9aa4a6; /* offline */
+    border: 2px solid #0b1416;
+    transition: background .12s ease;
+    box-shadow: 0 0 0 transparent;
+
+    &.online {
+      background: #35c759; /* green */
+    }
+
+    /* küçük pulse efekt (sadece online) */
+    &.online::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      background: rgba(53,199,89,0.12);
+      animation: presencePulse 1.6s infinite;
+      z-index: -1;
+    }
+  }
+
+
+/* mesaj altındaki küçük metin */
+.message-presence-text {
+  margin-top: 6px;
+  color: #9aa4a6;
+  font-size: 11px;
+  line-height: 1;
 }

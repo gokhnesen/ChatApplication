@@ -23,14 +23,12 @@ export class Register {
   isUploading: boolean = false;
   successMessage: string = '';
 
-  // validation messages
   nameError: string = '';
   lastNameError: string = '';
   emailError: string = '';
   passwordError: string = '';
   photoError: string = '';
 
-  // show errors only after touch / submit
   nameTouched = false;
   lastNameTouched = false;
   emailTouched = false;
