@@ -69,27 +69,33 @@ export class ChatSignalrService {
     }
   }
 
-  // ✅ GÜNCELLENECEK - Attachment bilgilerini ekle
-  onReceiveMessage(callback: (
+
+onReceiveMessage(callback: (
     senderId: string, 
     content: string,
     type: MessageType,
     attachmentUrl: string | null,
     attachmentName: string | null,
-    attachmentSize: number | null
-  ) => void): void {
+    attachmentSize: number | null,
+    messageId: string, // <-- Yeni
+    sentAt: string     // <-- Yeni
+) => void): void {
     this.hubConnection?.off('ReceiveMessage');
     this.hubConnection?.on('ReceiveMessage', (
-      senderId: string, 
-      content: string,
-      type: MessageType,
-      attachmentUrl: string | null,
-      attachmentName: string | null,
-      attachmentSize: number | null
+        senderId: string, 
+        content: string,
+        type: MessageType,
+        attachmentUrl: string | null,
+        attachmentName: string | null,
+        attachmentSize: number | null,
+        messageId: string, // <-- Yeni
+        sentAt: string     // <-- Yeni
     ) => {
-      callback(senderId, content, type, attachmentUrl, attachmentName, attachmentSize);
+        callback(senderId, content, type, attachmentUrl, attachmentName, attachmentSize, messageId, sentAt);
     });
-  }
+}
+
+// Aynı mantık onMessageSent için de uygulanmalıdır.
 
   // ✅ GÜNCELLENECEK - Attachment bilgilerini ekle
   onMessageSent(callback: (
@@ -134,20 +140,6 @@ export class ChatSignalrService {
         .catch(() => {});
     }
     return Promise.resolve();
-  }
-
-  sendMessage(
-    receiverId: string, 
-    content: string,
-    type: MessageType = MessageType.Text,
-    attachmentUrl?: string | null,
-    attachmentName?: string | null,
-    attachmentSize?: number | null
-  ): void {
-    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
-      this.hubConnection.invoke('SendMessage', receiverId, content, type, attachmentUrl, attachmentName, attachmentSize)
-        .catch(err => console.error('SendMessage error:', err));
-    }
   }
 
   isConnected(): boolean {

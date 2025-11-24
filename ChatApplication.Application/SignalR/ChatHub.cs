@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using ChatApplication.Application.Features.Messages.Commands.SendMessage;
+using ChatApplication.Domain.Entities;
+using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using static System.Net.Mime.MediaTypeNames;
@@ -14,53 +17,70 @@ namespace ChatApplication.Application.SignalR
 
         // userId -> connection count
         private static readonly ConcurrentDictionary<string, int> _userConnectionCount = new();
-
-        public ChatHub(ILogger<ChatHub> logger)
+        private readonly IMediator _mediator;
+        // Change this:
+    
+        public ChatHub(ILogger<ChatHub> logger, IMediator mediator)
         {
             _logger = logger;
+            _mediator = mediator;
         }
 
         public async Task SendMessage(
-            string receiverId,
-            string content,
-            int type = 0,
-            string? attachmentUrl = null,
-            string? attachmentName = null,
-            long? attachmentSize = null)
+                    string receiverId,
+                    string content,
+                    int type = 0,
+                    string? attachmentUrl = null,
+                    string? attachmentName = null,
+                    long? attachmentSize = null)
         {
+            var senderId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(senderId))
+            {
+                _logger.LogWarning("SendMessage çağrıldı ama UserIdentifier null");
+                throw new HubException("Kullanıcı kimliği bulunamadı");
+            }
+
+            // 1. Command'ı Oluştur
+            var command = new SendMessageCommand
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Content = content,
+                Type = (MessageType)type,
+                AttachmentUrl = attachmentUrl,
+                AttachmentName = attachmentName,
+                AttachmentSize = attachmentSize
+            };
+
             try
             {
-                var senderId = Context.UserIdentifier;
+                _logger.LogInformation("SignalR Command Handler'a mesaj gönderiyor: {SenderId} -> {ReceiverId}", senderId, receiverId);
 
-                if (string.IsNullOrEmpty(senderId))
-                {
-                    _logger.LogWarning("SendMessage çağrıldı ama UserIdentifier null");
-                    throw new HubException("Kullanıcı kimliği bulunamadı");
-                }
+                // 2. Command'ı Handler'a Gönder (Tüm İş Mantığı Handler'da çalışacak)
+                var response = await _mediator.Send(command);
 
-                _logger.LogInformation(
-                    "SignalR mesaj iletiliyor: {SenderId} -> {ReceiverId}, Type: {Type}, HasAttachment: {HasAttachment}",
-                    senderId, receiverId, type, !string.IsNullOrEmpty(attachmentUrl));
-
-                await Clients.User(receiverId).SendAsync("ReceiveMessage",
-                    senderId,
-                    content,
-                    type,
-                    attachmentUrl,
-                    attachmentName,
-                    attachmentSize);
-
+                // 3. Başarılı olduysa, SADECE göndericiyi bilgilendir (Alıcıya iletimi Handler yapacak)
                 await Clients.Caller.SendAsync("MessageSent",
-                    receiverId,
-                    content,
-                    type,
-                    attachmentUrl,
-                    attachmentName,
-                    attachmentSize);
+                    response.ReceiverId,
+                    response.Content,
+                    response.Type,
+                    response.AttachmentUrl,
+                    response.AttachmentName,
+                    response.AttachmentSize,
+                    response.MessageId, // Yeni eklenen: Mesaj ID'sini geri gönderiyoruz
+                    response.SentAt);  // Yeni eklenen: Sunucu zamanını geri gönderiyoruz
+            }
+            catch (HubException ex)
+            {
+                // İş mantığı hatalarını (örneğin engellenme) istemciye ilet
+                _logger.LogWarning("Hub hatası: {Message}", ex.Message);
+                await Clients.Caller.SendAsync("MessageError", ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "SignalR mesaj iletiminde hata oluştu");
+                _logger.LogError(ex, "SignalR mesaj iletiminde beklenmeyen hata oluştu");
                 await Clients.Caller.SendAsync("MessageError", "Bir hata oluştu");
             }
         }
@@ -142,6 +162,7 @@ namespace ChatApplication.Application.SignalR
             return _userConnectionCount.TryGetValue(userId, out var count) && count > 0;
         }
 
+
         public async Task NotifyMessagesRead(List<string> messageIds)
         {
             try
@@ -157,12 +178,14 @@ namespace ChatApplication.Application.SignalR
                 _logger.LogInformation("{Count} mesaj okundu olarak işaretlendi: {SenderId}",
                     messageIds.Count, senderId);
 
-                await Clients.User(senderId).SendAsync("MessagesRead", messageIds);
+                // QUICK FIX: tüm istemcilere bildir (hemen çalışır)
+                await Clients.All.SendAsync("MessagesRead", messageIds);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "NotifyMessagesRead'de hata oluştu");
             }
         }
+
     }
 }

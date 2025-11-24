@@ -1,18 +1,21 @@
-﻿using MediatR;
+﻿using ChatApplication.Application.Interfaces;
+using ChatApplication.Application.Interfaces.Friend;
 using ChatApplication.Application.SignalR;
-using ChatApplication.Application.Interfaces;
 using ChatApplication.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.SignalR;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using ChatApplication.Application.Interfaces.Friend;
 
 namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
 {
+  
+
     public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, SendMessageCommandResponse>
     {
         private readonly IWriteRepository<Message> _writeRepository;
-        private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IHubContext<ChatHub> _hubContext; 
         private readonly IFriendReadRepository _friendReadRepository;
 
         public SendMessageCommandHandler(
@@ -27,35 +30,37 @@ namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
 
         public async Task<SendMessageCommandResponse> Handle(SendMessageCommand request, CancellationToken cancellationToken)
         {
+            // --- 1. İŞ MANTIĞI VE KONTROL ---
+
             if (string.IsNullOrEmpty(request.ReceiverId))
             {
-                throw new InvalidOperationException("Alıcı belirtilmemiş.");
+                throw new HubException("Alıcı belirtilmemiş."); // Hub'ın yakalayacağı bir Exception fırlatın
             }
 
+            // Arkadaşlık Kontrolü (Veritabanı Sorgusu)
             var friendship = await _friendReadRepository.GetFriendRequestAsync(request.SenderId, request.ReceiverId);
             if (friendship == null || friendship.Status != FriendStatus.Onaylandi)
             {
-                throw new InvalidOperationException("Mesaj gönderebilmek için alıcı ile arkadaş olmanız gerekir.");
+                throw new HubException("Mesaj gönderebilmek için alıcı ile arkadaş olmanız gerekir.");
             }
 
+            // Engelleme Kontrolü (Veritabanı Sorgusu)
             var receiverBlockedSender = await _friendReadRepository.IsBlockedAsync(request.ReceiverId, request.SenderId);
             if (receiverBlockedSender)
             {
-                throw new InvalidOperationException("Alıcı sizi engellemiş, mesaj gönderemezsiniz.");
+                throw new HubException("Alıcı sizi engellemiş, mesaj gönderilemedi.");
             }
+            // Göndericinin alıcıyı engelleme kontrolü de aynı şekilde yapılabilir.
 
-            var senderBlockedReceiver = await _friendReadRepository.IsBlockedAsync(request.SenderId, request.ReceiverId);
-            if (senderBlockedReceiver)
-            {
-                throw new InvalidOperationException("Bu kullanıcı engellenmiş, işlem yapılamaz.");
-            }
+
+            // --- 2. VERİTABANI İŞLEMİ (Kalıcılık) ---
 
             var message = new Message
             {
                 SenderId = request.SenderId,
                 ReceiverId = request.ReceiverId,
                 Content = request.Content,
-                SentAt = DateTime.UtcNow,
+                SentAt = DateTime.UtcNow, // Sunucu zamanı önemlidir
                 IsRead = false,
                 Type = request.Type,
                 AttachmentUrl = request.AttachmentUrl,
@@ -66,36 +71,23 @@ namespace ChatApplication.Application.Features.Messages.Commands.SendMessage
             await _writeRepository.AddAsync(message);
             await _writeRepository.SaveAsync();
 
-            // SignalR ile alıcıya mesajı gönder
-            await _hubContext.Clients.User(request.ReceiverId)
-                .SendAsync("ReceiveMessage", new
-                {
-                    messageId = message.Id,
-                    senderId = message.SenderId,
-                    receiverId = message.ReceiverId,
-                    content = message.Content,
-                    sentAt = message.SentAt,
-                    type = message.Type,
-                    attachmentUrl = message.AttachmentUrl,
-                    attachmentName = message.AttachmentName,
-                    attachmentSize = message.AttachmentSize
-                }, cancellationToken);
+            // --- 3. GERÇEK ZAMANLI İLETİM ---
 
-            await _hubContext.Clients.User(request.SenderId)
-                .SendAsync("MessageSent", new
-                {
-                    messageId = message.Id,
-                    senderId = message.SenderId,
-                    receiverId = message.ReceiverId,
-                    content = message.Content,
-                    sentAt = message.SentAt,
-                    type = message.Type,
-                    attachmentUrl = message.AttachmentUrl,
-                    attachmentName = message.AttachmentName,
-                    attachmentSize = message.AttachmentSize
-                }, cancellationToken);
+            // HubContext kullanarak alıcıya mesajı ilet.
+            // Bu, Hub dışından (Handler içinden) SignalR istemcilerine erişmenin Best Practice yoludur.
+            await _hubContext.Clients.User(request.ReceiverId).SendAsync("ReceiveMessage",
+                message.SenderId,
+                message.Content,
+                message.Type,
+                message.AttachmentUrl,
+                message.AttachmentName,
+                message.AttachmentSize,
+                message.Id, // Mesaj ID'si alıcıya da gönderilir
+                message.SentAt);
 
-            return new SendMessageCommandResponse
+            // --- 4. YANIT DÖNÜŞÜ ---
+
+            return new SendMessageCommandResponse // Kaydedilen verileri Hub'a geri gönderiyoruz
             {
                 MessageId = message.Id,
                 SenderId = message.SenderId,
