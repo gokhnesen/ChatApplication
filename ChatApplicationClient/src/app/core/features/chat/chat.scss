@@ -228,9 +228,31 @@
 .message-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  margin-top: 4px;
-  gap: 4px;
+  gap: 8px;
+}
+
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+}
+
+/* default: gönderildi (gri) */
+.tick {
+  display: inline-block;
+  color: #9aa0a6; /* gri */
+}
+
+/* okundu: mavi */
+.tick-read {
+  color: #2b9bf4; /* mavi ton */
+}
+
+/* ufak boşluk hizalama */
+.message-status .tick {
+  margin-left: 4px;
+  vertical-align: middle;
+  stroke-width: 2;
 }
 
 .message-time {

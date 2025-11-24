@@ -86,6 +86,19 @@
           
           <div class="message-footer">
             <small class="message-time">{{ msg.sentAt | date:'dd/MM/yyyy HH:mm':'Europe/Istanbul' }}</small>
+            <span class="message-status" *ngIf="isOwnMessage(msg)">
+              <ng-container *ngIf="msg.isRead; else notRead">
+                <svg class="tick tick-read" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                  <polyline points="22 6 12 17 7 12"></polyline>
+                </svg>
+              </ng-container>
+              <ng-template #notRead>
+                <svg class="tick tick-sent" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </ng-template>
+            </span>
           </div>
         </div>
       </div>
@@ -149,7 +162,6 @@
         </svg>
       </button>
 
-      <!-- Kamera butonu -->
       <button 
         type="button" 
         class="camera-btn" 
@@ -353,6 +365,14 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Image preview modal (client-side only) -->
+  <div class="image-modal" *ngIf="imagePreviewUrl" (click)="closeImagePreview()">
+    <div class="image-modal-content" (click)="$event.stopPropagation()">
+      <button class="image-modal-close" (click)="closeImagePreview()" aria-label="Kapat">×</button>
+      <img [src]="imagePreviewUrl" alt="Resim önizleme" (error)="onImageError($event)" />
     </div>
   </div>
 </div>

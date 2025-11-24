@@ -12,6 +12,7 @@ import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { PickerComponent } from '@ctrl/ngx-emoji-mart';
 import { AttachFilePipe } from "../../pipes/attach-file.pipe";
 import { NotificationService } from '../../services/notification-service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-chat',
@@ -762,11 +763,14 @@ private startPresenceTracking(): void {
       return;
     }
 
-    const command = {
+    const command: Message = {
       senderId: this.currentUser.id,
       receiverId: this.receiverUser.id,
       content: this.messageText,
-      type: MessageType.Text
+      type: MessageType.Text,
+      id: '',
+      sentAt: new Date(),
+      isRead: false
     };
 
     try {
@@ -787,24 +791,15 @@ private startPresenceTracking(): void {
         this.messageText = '';
         
         this.shouldScrollToBottom = true; // ✅ Mesaj gönderince scroll yap
-        
-        // SignalR ile karşı tarafa bildir
-        if (this.signalRService.isConnected()) {
-          this.signalRService.sendMessage(
-            this.receiverUser.id, 
-            command.content,
-            MessageType.Text
-          );
-        }
-        
-        // Friends component'e bildir
+
+        // Not: client'tan SignalR ile direkt gönderim yapılmayacak — backend mesajı kendi broadcast eder.
         this.messageBroadcast.notifyNewMessage({
           friendId: this.receiverUser.id,
           content: command.content,
           senderId: this.currentUser.id,
           receiverId: this.receiverUser.id,
           sentAt: new Date(),
-          isOwn: false,
+          isOwn: true,
           type: MessageType.Text
         });
         // Mesaj gönderildi notification kaldırıldı!
@@ -858,16 +853,7 @@ private startPresenceTracking(): void {
         this.selectedFilePreview = null;
         this.shouldScrollToBottom = true;
         
-        if (this.signalRService.isConnected()) {
-          this.signalRService.sendMessage(
-            this.receiverUser.id, 
-            messageCommand.content,
-            messageCommand.type,
-            messageCommand.attachmentUrl,
-            messageCommand.attachmentName,
-            messageCommand.attachmentSize
-          );
-        }
+        // Not: client'tan SignalR ile direkt gönderim yapılmayacak — backend mesajı kendi broadcast eder.
         
         this.messageBroadcast.notifyNewMessage({
           friendId: this.receiverUser.id,
@@ -926,9 +912,21 @@ private startPresenceTracking(): void {
   }
 
   openImagePreview(url: string | null | undefined) {
-    if (url) {
-      window.open(url, '_blank');
+    if (!url) return;
+
+    let finalUrl = url;
+
+    // Eğer rota backend tarafında /uploads/... şeklindeyse, apiUrl ile tamamla
+    if (url.startsWith('/uploads') || url.startsWith('uploads')) {
+      const base = environment.apiUrl?.replace(/\/$/, '') || '';
+      finalUrl = url.startsWith('/') ? base + url : base + '/' + url;
+    } else if (!/^https?:\/\//i.test(url)) {
+      // göreli diğer yollar için de backend'e bağla
+      const base = environment.apiUrl?.replace(/\/$/, '') || '';
+      finalUrl = base + '/' + url.replace(/^\//, '');
     }
+
+    window.open(finalUrl, '_blank', 'noopener');
   }
 
   // Kamerayı aç
