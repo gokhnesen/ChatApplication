@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
-import { NotificationService } from '../../services/notification-service'; // EKLE
+import { NotificationService } from '../../services/notification-service';
 import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
@@ -12,7 +12,7 @@ import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 @Component({
   selector: 'app-add-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule,ProfilePhotoPipe],
+  imports: [CommonModule, FormsModule, RouterModule, ProfilePhotoPipe],
   templateUrl: './add-friends.html',
   styleUrls: ['./add-friends.scss']
 })
@@ -20,7 +20,7 @@ export class AddFriends implements OnInit, OnDestroy {
   searchText: string = '';
   users: any[] = [];
   isLoading: boolean = false;
-  searchError: string = ''; // yeni
+  searchError: string = '';
 
   private searchSubject = new Subject<string>();
   private subscriptions: Subscription[] = [];
@@ -30,7 +30,6 @@ export class AddFriends implements OnInit, OnDestroy {
   private loadingIds = new Set<string>();
   private profilePhotoPipe = new ProfilePhotoPipe();
 
-  // izin verilen karakterler: harfler, rakamlar ve boşluk
   private allowedPattern = /^[\p{L}\p{N}\s]*$/u;
 
   constructor(
@@ -42,7 +41,6 @@ export class AddFriends implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Mevcut arkadaşları yükle
     this.subscriptions.push(
       this.friendService.getMyFriends().subscribe({
         next: (friends: any[]) => {
@@ -52,7 +50,6 @@ export class AddFriends implements OnInit, OnDestroy {
       })
     );
 
-    // Bekleyen arkadaşlık isteklerini yükle
     this.loadPendingRequests();
 
     this.subscriptions.push(
@@ -62,7 +59,6 @@ export class AddFriends implements OnInit, OnDestroy {
         switchMap(searchTerm => {
           const term = searchTerm.trim();
           this.lastSearchTerm = term;
-          // VALIDASYON: en az 2 karakter gerekli
           if (term.length === 0) {
             this.searchError = '';
             this.users = [];
@@ -91,7 +87,6 @@ export class AddFriends implements OnInit, OnDestroy {
                 this.myFriendIds.add(user.id);
               }
             });
-            // ekstra pending kontrolü
             this.checkPendingRequestsForUsers();
           } else {
             this.users = [];
@@ -106,10 +101,8 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   private loadPendingRequests(): void {
-    // Gönderilen bekleyen istekleri yükle
     this.friendService.getPendingRequests().subscribe({
       next: (requests: any[]) => {
-        // Sadece kendimin gönderdiği istekleri al (sender olarak)
         const sentRequests = (requests || []).filter((r: any) => r.senderId === this.userService.currentUser()?.id);
         this.requestedIds = new Set(sentRequests.map((r: any) => r.receiverId));
       },
@@ -118,9 +111,8 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   private checkPendingRequestsForUsers(): void {
-    // Arama sonuçlarındaki kullanıcılar için bekleyen istekleri kontrol et
     if (this.users.length === 0) return;
-    
+
     this.friendService.getPendingRequests().subscribe({
       next: (requests: any[]) => {
         const sentRequests = (requests || []).filter((r: any) => r.senderId === this.userService.currentUser()?.id);
@@ -135,19 +127,15 @@ export class AddFriends implements OnInit, OnDestroy {
     this.searchSubject.complete();
   }
 
-  // helper: özel karakter kontrolü (Unicode harf/sayı/boşluk dışındakileri reddeder)
   private containsInvalidChars(text: string): boolean {
     if (!text) return false;
-    // Unicode property escape: tüm dillerdeki harfler ve sayılar ile boşluğu izin ver
     return /[^\p{L}\p{N}\s]/u.test(text);
   }
 
   onSearchKeydown(ev: KeyboardEvent): void {
     const k = ev.key;
-
     const controlKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter','Home','End','Escape'];
     if (controlKeys.includes(k)) return;
-
     if (k.length === 1 && !this.allowedPattern.test(k)) {
       ev.preventDefault();
       this.searchError = 'Özel karakter kullanmayın.';
@@ -177,7 +165,6 @@ export class AddFriends implements OnInit, OnDestroy {
       setTimeout(() => { if (this.searchError === 'Geçersiz karakterler otomatik olarak kaldırıldı.') this.searchError = ''; }, 1800);
     }
 
-    // mevcut kontroller (uzunluk, özel karakter, min 2) devam eder
     if (this.searchText.length > 10) {
       this.searchError = 'En fazla 10 karakter girebilirsiniz.';
       this.users = [];
@@ -207,9 +194,9 @@ export class AddFriends implements OnInit, OnDestroy {
   }
 
   addFriend(user: any): void {
-    if (this.isAlreadyFriend(user)) { 
+    if (this.isAlreadyFriend(user)) {
       this.notificationService.show('Zaten arkadaşsınız.', 'info');
-      return; 
+      return;
     }
     if (this.requestedIds.has(user.id)) {
       this.notificationService.show('Arkadaşlık isteği zaten gönderilmiş.', 'warning');
@@ -224,7 +211,7 @@ export class AddFriends implements OnInit, OnDestroy {
           this.requestedIds.add(user.id);
           this.notificationService.show('Arkadaşlık isteği gönderildi!', 'success');
         } else {
-          if (res?.message?.includes('zaten gönderilmiş') || 
+          if (res?.message?.includes('zaten gönderilmiş') ||
               res?.errors?.some((e: string) => e.includes('already exists'))) {
             this.requestedIds.add(user.id);
           }
@@ -234,7 +221,7 @@ export class AddFriends implements OnInit, OnDestroy {
       error: (err) => {
         this.loadingIds.delete(user.id);
         const msg = err?.error?.message || 'Arkadaşlık isteği gönderilemedi.';
-        if (msg.includes('zaten gönderilmiş') || 
+        if (msg.includes('zaten gönderilmiş') ||
             err?.error?.errors?.some((e: string) => e.includes('already exists'))) {
           this.requestedIds.add(user.id);
         }

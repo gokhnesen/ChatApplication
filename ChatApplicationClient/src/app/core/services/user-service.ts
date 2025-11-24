@@ -3,8 +3,8 @@ import { Injectable, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, BehaviorSubject } from 'rxjs';
 import { catchError, tap, switchMap, shareReplay } from 'rxjs/operators';
-import { User } from '../shared/models/user';
 import { environment } from '../../../environments/environment';
+import { User } from '../shared/models/user';
 
 @Injectable({
   providedIn: 'root'
@@ -51,7 +51,6 @@ export class UserService {
     );
   }
 
-  // ✅ Cache ile getUserInfo (forceRefresh parametresi ekledik)
   getUserInfo(forceRefresh: boolean = false): Observable<User> {
     if (!forceRefresh && this.userInfoCache$) {
       return this.userInfoCache$;
@@ -63,9 +62,9 @@ export class UserService {
           this.currentUser.set(u);
           localStorage.setItem('currentUser', JSON.stringify(u));
         }),
-        shareReplay(1), // ✅ Cache mekanizması - aynı observable'ı paylaş
+        shareReplay(1), 
         catchError(error => {
-          this.userInfoCache$ = undefined; // ✅ Hata durumunda cache'i temizle
+          this.userInfoCache$ = undefined;
           throw error;
         })
       );

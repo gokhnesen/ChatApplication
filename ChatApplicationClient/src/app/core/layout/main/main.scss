@@ -6,7 +6,6 @@
   position: relative;
 }
 
-/* Router outlet içeriğinin boşluksuz olarak arkadaş listesinin yanına yapışması için */
 router-outlet + * {
   flex: 1;
   height: 100%;
@@ -14,7 +13,6 @@ router-outlet + * {
   padding: 0;
 }
 
-/* Router outlet boşluğunu temizleme */
 :host ::ng-deep router-outlet + * {
   height: 100%;
   display: flex;

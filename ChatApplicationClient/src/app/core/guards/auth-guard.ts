@@ -19,13 +19,11 @@ export const authGuard: CanActivateFn = (route, state) => {
     return false;
   }
 
-  // CurrentUser varsa direkt geç
   const currentUser = userService.currentUser();
   if (currentUser && currentUser.id) {
     return true;
   }
 
-  // CurrentUser yoksa backend'den al
   return userService.getUserInfo().pipe(
     map(user => {
       if (user && user.id) {

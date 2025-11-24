@@ -12,13 +12,10 @@ namespace ChatApplication.Application.SignalR
     {
         private readonly ILogger<ChatHub> _logger;
 
-        // connectionId -> userId
         private static readonly ConcurrentDictionary<string, string> _connectionUserMap = new();
 
-        // userId -> connection count
         private static readonly ConcurrentDictionary<string, int> _userConnectionCount = new();
         private readonly IMediator _mediator;
-        // Change this:
     
         public ChatHub(ILogger<ChatHub> logger, IMediator mediator)
         {
@@ -42,7 +39,6 @@ namespace ChatApplication.Application.SignalR
                 throw new HubException("Kullanıcı kimliği bulunamadı");
             }
 
-            // 1. Command'ı Oluştur
             var command = new SendMessageCommand
             {
                 SenderId = senderId,
@@ -58,10 +54,8 @@ namespace ChatApplication.Application.SignalR
             {
                 _logger.LogInformation("SignalR Command Handler'a mesaj gönderiyor: {SenderId} -> {ReceiverId}", senderId, receiverId);
 
-                // 2. Command'ı Handler'a Gönder (Tüm İş Mantığı Handler'da çalışacak)
                 var response = await _mediator.Send(command);
 
-                // 3. Başarılı olduysa, SADECE göndericiyi bilgilendir (Alıcıya iletimi Handler yapacak)
                 await Clients.Caller.SendAsync("MessageSent",
                     response.ReceiverId,
                     response.Content,
@@ -69,12 +63,11 @@ namespace ChatApplication.Application.SignalR
                     response.AttachmentUrl,
                     response.AttachmentName,
                     response.AttachmentSize,
-                    response.MessageId, // Yeni eklenen: Mesaj ID'sini geri gönderiyoruz
-                    response.SentAt);  // Yeni eklenen: Sunucu zamanını geri gönderiyoruz
+                    response.MessageId, 
+                    response.SentAt);  
             }
             catch (HubException ex)
             {
-                // İş mantığı hatalarını (örneğin engellenme) istemciye ilet
                 _logger.LogWarning("Hub hatası: {Message}", ex.Message);
                 await Clients.Caller.SendAsync("MessageError", ex.Message);
             }
@@ -125,14 +118,12 @@ namespace ChatApplication.Application.SignalR
 
             if (_connectionUserMap.TryRemove(connectionId, out var userId) && !string.IsNullOrEmpty(userId))
             {
-                // decrement count
                 _userConnectionCount.AddOrUpdate(userId, 0, (_, existing) =>
                 {
                     var newVal = Math.Max(0, existing - 1);
                     return newVal;
                 });
 
-                // if zero, remove key
                 if (_userConnectionCount.TryGetValue(userId, out var cnt) && cnt == 0)
                 {
                     _userConnectionCount.TryRemove(userId, out _);
@@ -178,7 +169,6 @@ namespace ChatApplication.Application.SignalR
                 _logger.LogInformation("{Count} mesaj okundu olarak işaretlendi: {SenderId}",
                     messageIds.Count, senderId);
 
-                // QUICK FIX: tüm istemcilere bildir (hemen çalışır)
                 await Clients.All.SendAsync("MessagesRead", messageIds);
             }
             catch (Exception ex)

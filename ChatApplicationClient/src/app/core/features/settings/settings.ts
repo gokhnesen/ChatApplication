@@ -8,6 +8,7 @@ import { NotificationService } from '../../services/notification-service'; // EK
 import { AbstractControl } from '@angular/forms';
 import { CustomValidators } from '../../shared/validators/custom-validators';
 import { Router } from '@angular/router';
+import { finalize, tap } from 'rxjs';
 
 @Component({
   selector: 'app-settings',
@@ -265,23 +266,21 @@ export class Settings implements OnInit {
     if (!this.selectedFile) return;
 
     this.isUploadingPhoto = true;
-    this.userService.uploadProfilePhoto(this.selectedFile).subscribe({
-      next: (response) => {
-        if (response.isSuccess) {
-          this.currentUser.profilePhotoUrl = response.profilePhotoUrl;
-          this.userService.getUserInfo().subscribe();
-          alert('Profil fotoğrafı güncellendi!');
-        }
-        this.isUploadingPhoto = false;
-        this.selectedFile = null;
-      },
-      error: (error) => {
-        console.error('Fotoğraf yükleme hatası:', error);
-        alert('Fotoğraf yüklenemedi.');
-        this.isUploadingPhoto = false;
-        this.selectedFile = null;
-      }
-    });
+        this.userService.getUserInfo().pipe(
+              tap(user => { 
+                  // Yerel state'i güncelle, gerekliyse
+                  this.currentUser = user; 
+              }),
+              finalize(() => {
+                  this.isUploadingPhoto = false;
+                  this.selectedFile = null;
+              })
+          ).subscribe(() => {
+              this.notificationService.show('Profil fotoğrafı başarıyla güncellendi!', 'success');
+          }, error => {
+              this.notificationService.show('Fotoğraf yüklenirken hata oluştu.', 'error');
+          });
+
   }
 
   // ✅ Engeli kaldır (notification ile)
@@ -445,12 +444,10 @@ export class Settings implements OnInit {
           this.userService.deleteAccount(userId).subscribe({
             next: (res) => {
               if (res?.isSuccess !== false) {
-                // temizle ve yönlendir
                 this.notificationService.show(res?.message ?? 'Hesabınız silindi.', 'success');
-                // temiz oturum işlemleri
                 this.userService.logout().subscribe({
                   next: () => {
-                    // yönlendir
+                    // 
                     this.router.navigate(['/login']).catch(() => { window.location.href = '/'; });
                   },
                   error: () => {
