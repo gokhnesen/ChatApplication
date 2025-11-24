@@ -11,7 +11,7 @@ import { Message, MessageType } from '../../shared/models/message';
 import { Subscription, forkJoin } from 'rxjs';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
 import { FriendRequest } from './friend-request/friend-request';
-import { NotificationService } from '../../services/notification-service'; // EKLE
+import { NotificationService } from '../../services/notification-service';
 
 @Component({
   selector: 'app-friends',
@@ -41,7 +41,7 @@ export class Friends implements OnInit, OnDestroy {
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
   private messageBroadcast = inject(MessageService);
-  private notificationService = inject(NotificationService); // EKLE
+  private notificationService = inject(NotificationService);
 
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -56,7 +56,7 @@ export class Friends implements OnInit, OnDestroy {
     private friendService: FriendService
   ) {
     this.initNotificationSound();
-    
+
     effect(() => {
       const user = this.userService.currentUser();
       if (user) {
@@ -69,33 +69,21 @@ export class Friends implements OnInit, OnDestroy {
 
   private initNotificationSound(): void {
     try {
-      // Farklı yolları dene
       const soundPath = 'assets/sounds/notify.mp3';
       this.notificationSound = new Audio(soundPath);
       this.notificationSound.preload = 'auto';
       this.notificationSound.volume = 0.5;
-      
-      // Ses yüklendiğinde log
-      this.notificationSound.addEventListener('canplaythrough', () => {
-        console.log('✅ Bildirim sesi yüklendi');
-      }, { once: true });
-      
-      // Hata durumunda log
-      this.notificationSound.addEventListener('error', (e) => {
-        console.error('❌ Ses dosyası yüklenemedi:', e);
-        console.error('Denenen yol:', soundPath);
-      });
-      
-    } catch (error) {
-      console.error('❌ Audio nesnesi oluşturulamadı:', error);
+    } catch {
+      // silently ignore audio creation errors
     }
   }
 
   ngOnInit(): void {
     this.loadPendingRequestCount();
-      this.friendService.friendsListChanges().subscribe(friends => {
-    this.friends = friends;
-  });
+    this.friendService.friendsListChanges().subscribe(friends => {
+      this.friends = friends;
+    });
+
     this.subscriptions.push(
       this.route.paramMap.subscribe((params: ParamMap) => {
         this.pendingFriendId = params.get('id');
@@ -163,7 +151,7 @@ export class Friends implements OnInit, OnDestroy {
   loadPendingRequests(): void {
     this.requestsLoading = true;
     this.requestsError = null;
-    
+
     this.friendService.getPendingRequests().subscribe({
       next: (requests) => {
         this.pendingRequests = requests || [];
@@ -182,7 +170,7 @@ export class Friends implements OnInit, OnDestroy {
   respondToRequest(request: PendingFriendRequest, accept: boolean): void {
     const fid = request.friendshipId;
     if (this.processingRequests.has(fid)) return;
-    
+
     this.processingRequests.add(fid);
 
     this.friendService.respondToFriendRequestById(fid, accept).subscribe({
@@ -191,23 +179,23 @@ export class Friends implements OnInit, OnDestroy {
         this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== fid);
         this.pendingRequestCount = this.pendingRequests.length;
         this.loadPendingRequestCount();
-        
+
         if (accept) {
           this.loadFriendsWithMessages();
-          this.notificationService.show('Arkadaşlık isteği kabul edildi!', 'success'); // EKLE
+          this.notificationService.show('Arkadaşlık isteği kabul edildi!', 'success');
         } else {
-          this.notificationService.show('Arkadaşlık isteği reddedildi.', 'info'); // EKLE
+          this.notificationService.show('Arkadaşlık isteği reddedildi.', 'info');
         }
-        
+
         if (this.pendingRequests.length === 0) {
           this.closeFriendRequests();
         }
-        
+
         this.cdr.detectChanges();
       },
       error: (err) => {
         this.processingRequests.delete(fid);
-        this.notificationService.show(err?.error?.message || 'İstek işlenirken hata oluştu', 'error'); // EKLE
+        this.notificationService.show(err?.error?.message || 'İstek işlenirken hata oluştu', 'error');
         this.cdr.detectChanges();
       }
     });
@@ -244,7 +232,7 @@ export class Friends implements OnInit, OnDestroy {
 
   getLastMessagePreview(friend: Friend): string {
     const message = this.getLastMessage(friend);
-    
+
     if (!message || !message.hasMessage) {
       return 'Henüz mesaj yok';
     }
@@ -260,8 +248,8 @@ export class Friends implements OnInit, OnDestroy {
       case MessageType.File:
         return prefix + '📎 ' + (message.attachmentName || 'Dosya');
       default:
-        const content = message.content.length > 30 
-          ? message.content.substring(0, 30) + '...' 
+        const content = message.content.length > 30
+          ? message.content.substring(0, 30) + '...'
           : message.content;
         return prefix + content;
     }
@@ -269,7 +257,7 @@ export class Friends implements OnInit, OnDestroy {
 
   getLastMessageTime(friend: Friend): string {
     const message = this.getLastMessage(friend);
-    
+
     if (!message || !message.hasMessage) {
       return '';
     }
@@ -285,7 +273,7 @@ export class Friends implements OnInit, OnDestroy {
     if (diffMins < 60) return `${diffMins}dk`;
     if (diffHours < 24) return `${diffHours}sa`;
     if (diffDays < 7) return `${diffDays}g`;
-    
+
     return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
   }
 
@@ -319,7 +307,7 @@ export class Friends implements OnInit, OnDestroy {
         next: (data: Friend[]) => {
           this.friends = data;
           this.filteredFriends = [...this.friends];
-          
+
           if (this.pendingFriendId) {
             const f = this.friends.find(x => x.id === this.pendingFriendId);
             if (f) {
@@ -328,7 +316,7 @@ export class Friends implements OnInit, OnDestroy {
           } else if (this.router.url === '/chat' || this.router.url === '/') {
             this.loadLastSelectedFriend();
           }
-          
+
           this.loadLatestMessages();
         },
         error: () => {}
@@ -371,10 +359,10 @@ export class Friends implements OnInit, OnDestroy {
         next: (messages) => {
           messages.forEach((message, index) => {
             const friend = this.friends[index];
-            
+
             if (message && message.hasMessage) {
               this.friendMessages.set(friend.id, message);
-              
+
               if (!message.isRead && message.receiverId === this.currentUserId) {
                 friend.unreadMessageCount = 1;
               }
@@ -382,7 +370,7 @@ export class Friends implements OnInit, OnDestroy {
               this.friendMessages.set(friend.id, null);
             }
           });
-          
+
           this.sortFriendsByLastMessage();
           this.updateView();
         },
@@ -408,11 +396,10 @@ export class Friends implements OnInit, OnDestroy {
           );
         });
       })
-      
     );
 
     this.signalRService.onReceiveMessage((
-      senderId: string, 
+      senderId: string,
       content: string,
       type?: MessageType,
       attachmentUrl?: string | null,
@@ -435,7 +422,7 @@ export class Friends implements OnInit, OnDestroy {
     });
 
     this.signalRService.onMessageSent((
-      receiverId: string, 
+      receiverId: string,
       content: string,
       type?: MessageType,
       attachmentUrl?: string | null,
@@ -456,24 +443,26 @@ export class Friends implements OnInit, OnDestroy {
         );
       });
     });
-      this.signalRService.onFriendRequestReceived((request) => {
-    this.ngZone.run(() => {
-      const normalizedRequest: PendingFriendRequest = {
-        ...request,
-        senderProfilePhotoUrl: request.senderProfilePhotoUrl ?? null
-      };
-      this.pendingRequests = [normalizedRequest, ...this.pendingRequests];
-      this.pendingRequestCount = this.pendingRequests.length;
-      this.updateView();
-      this.playNotificationSound();
+
+    this.signalRService.onFriendRequestReceived((request) => {
+      this.ngZone.run(() => {
+        const normalizedRequest: PendingFriendRequest = {
+          ...request,
+          senderProfilePhotoUrl: request.senderProfilePhotoUrl ?? null
+        };
+        this.pendingRequests = [normalizedRequest, ...this.pendingRequests];
+        this.pendingRequestCount = this.pendingRequests.length;
+        this.updateView();
+        this.playNotificationSound();
+      });
     });
-  });
+
     this.signalRService.onFriendRequestAccepted((data) => {
-  this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== data.friendshipId);
-  this.pendingRequestCount = this.pendingRequests.length;
-  this.loadFriendsWithMessages();
-  this.updateView();
-});
+      this.pendingRequests = this.pendingRequests.filter(r => r.friendshipId !== data.friendshipId);
+      this.pendingRequestCount = this.pendingRequests.length;
+      this.loadFriendsWithMessages();
+      this.updateView();
+    });
   }
 
   private handleNewMessage(
@@ -507,7 +496,6 @@ export class Friends implements OnInit, OnDestroy {
     if (receiverId === this.currentUserId && senderId !== this.currentUserId) {
       friend.unreadMessageCount = (friend.unreadMessageCount || 0) + 1;
       this.playNotificationSound();
-      console.log('🔔 Gelen mesaj için ses çalındı');
     }
 
     this.sortFriendsByLastMessage();
@@ -516,33 +504,22 @@ export class Friends implements OnInit, OnDestroy {
 
   private playNotificationSound(): void {
     if (!this.notificationSound) {
-      console.warn('⚠️ Bildirim sesi başlatılmamış');
       return;
     }
 
-    console.log('🔔 Bildirim sesi çalınıyor...');
-    
-    // Kullanıcı etkileşimi gerekebilir, bu yüzden promise kullan
     const playPromise = this.notificationSound.play();
-    
+
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
-          console.log('✅ Ses başarıyla çalındı');
-          // Ses çalındıktan sonra başa al
           setTimeout(() => {
             if (this.notificationSound) {
               this.notificationSound.currentTime = 0;
             }
           }, 100);
         })
-        .catch((error) => {
-          console.error('❌ Ses çalınamadı:', error);
-          
-          // Tarayıcı politikası hatası ise kullanıcıya bildir
-          if (error.name === 'NotAllowedError') {
-            console.warn('⚠️ Tarayıcı sesi otomatik çalmaya izin vermiyor. Kullanıcı etkileşimi gerekiyor.');
-          }
+        .catch(() => {
+          // ignore playback errors
         });
     }
   }
@@ -551,10 +528,10 @@ export class Friends implements OnInit, OnDestroy {
     this.friends.sort((a, b) => {
       const messageA = this.friendMessages.get(a.id);
       const messageB = this.friendMessages.get(b.id);
-      
+
       const dateA = messageA?.sentAt ? new Date(messageA.sentAt).getTime() : 0;
       const dateB = messageB?.sentAt ? new Date(messageB.sentAt).getTime() : 0;
-      
+
       return dateB - dateA;
     });
   }
@@ -563,6 +540,4 @@ export class Friends implements OnInit, OnDestroy {
     this.filteredFriends = [...this.friends];
     this.cdr.detectChanges();
   }
-
-
 }

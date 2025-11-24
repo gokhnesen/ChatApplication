@@ -35,7 +35,6 @@ export class ChatSignalrService {
         console.error('[SignalR] connection error', err);
       });
  
-    // Sunucudan doğrudan yayınları dinle ve logla
     this.hubConnection.on('PresenceUpdated', (payload: { userId: string; isOnline: boolean; lastSeen?: string }) => {
       try {
         console.log('[SignalR] PresenceUpdated', payload);
@@ -46,7 +45,6 @@ export class ChatSignalrService {
     });
   }
 
-  // Sorgu: hub'da IsUserOnline(string userId) varsa kullanılır
   isUserOnline(userId: string): Promise<boolean> {
     if (!this.hubConnection || this.hubConnection.state !== signalR.HubConnectionState.Connected) {
       return Promise.resolve(false);
@@ -54,7 +52,6 @@ export class ChatSignalrService {
     return this.hubConnection.invoke<boolean>('IsUserOnline', userId).catch(() => false);
   }
   
-  // Toplu sorgu helper (kullanıcı arrayine durum yayınlamak için)
   async refreshPresence(userIds: string[]): Promise<void> {
     if (!userIds || userIds.length === 0) return;
     for (const id of userIds) {
@@ -77,8 +74,8 @@ onReceiveMessage(callback: (
     attachmentUrl: string | null,
     attachmentName: string | null,
     attachmentSize: number | null,
-    messageId: string, // <-- Yeni
-    sentAt: string     // <-- Yeni
+    messageId: string, 
+    sentAt: string     
 ) => void): void {
     this.hubConnection?.off('ReceiveMessage');
     this.hubConnection?.on('ReceiveMessage', (
@@ -88,16 +85,14 @@ onReceiveMessage(callback: (
         attachmentUrl: string | null,
         attachmentName: string | null,
         attachmentSize: number | null,
-        messageId: string, // <-- Yeni
-        sentAt: string     // <-- Yeni
+        messageId: string, 
+        sentAt: string     
     ) => {
         callback(senderId, content, type, attachmentUrl, attachmentName, attachmentSize, messageId, sentAt);
     });
 }
 
-// Aynı mantık onMessageSent için de uygulanmalıdır.
 
-  // ✅ GÜNCELLENECEK - Attachment bilgilerini ekle
   onMessageSent(callback: (
     receiverId: string, 
     content: string,

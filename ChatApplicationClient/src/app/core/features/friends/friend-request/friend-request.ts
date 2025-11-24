@@ -28,7 +28,6 @@ export class FriendRequest {
     img.src = 'assets/default-avatar.png';
   }
 
-  // ✅ Direkt Set üzerinden kontrol et
   isProcessing(id: string): boolean {
     return this.processingRequests.has(id);
   }

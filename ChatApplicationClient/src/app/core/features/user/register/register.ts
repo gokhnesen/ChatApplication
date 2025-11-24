@@ -43,7 +43,6 @@ export class Register {
     if (element.files && element.files.length > 0) {
       const file = element.files[0];
 
-      // Validate type
       const allowed = ['image/jpeg', 'image/png', 'image/webp'];
       if (!allowed.includes(file.type)) {
         this.photoError = 'Geçersiz dosya tipi. JPEG/PNG/WEBP olabilir.';
@@ -51,7 +50,6 @@ export class Register {
         return;
       }
 
-      // Validate size (5MB)
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         this.photoError = 'Dosya çok büyük. Maksimum 5MB olabilir.';
@@ -86,7 +84,6 @@ export class Register {
   }
 
   isFormValid(): boolean {
-    // reset messages
     this.nameError = '';
     this.lastNameError = '';
     this.emailError = '';
@@ -116,7 +113,6 @@ export class Register {
       return;
     }
 
-    // mevcut register akışı...
     try {
       this.isUploading = true;
       this.error = '';

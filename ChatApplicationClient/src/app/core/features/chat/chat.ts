@@ -50,7 +50,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private userService = inject(UserService);
   private signalRService = inject(ChatSignalrService);
   private messageBroadcast = inject(MessageService);
-  private notificationService = inject(NotificationService); // EKLE
+  private notificationService = inject(NotificationService);
   private subscriptions: Subscription[] = [];
   private presenceSub: Subscription | null = null;
   private presenceIntervalId: any = null;
@@ -132,9 +132,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           this.initializeSignalR();
           this.loadFriendsList();
         },
-        error: (error) => {
-          console.error('Kullanıcı bilgisi alınamadı:', error);
-        }
+        error: () => {}
       });
     }
     
@@ -145,12 +143,9 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       }
     });
 
-    // Presence aboneliği (SignalR'den gelen var/yok bildirimleri)
     this.presenceSub = this.signalRService.presence$.subscribe(p => {
       if (!p || !p.userId) return;
       if (p.userId.startsWith('____')) return;
-      // log her presence güncellemesini burada da görebilirsiniz
-      console.log('[Chat] presence update received in component', p);
       this.presenceMap[p.userId] = !!p.isOnline;
       for (const m of this.messages) {
         if (m.senderId === p.userId) {
@@ -163,99 +158,86 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
 
   private presenceMap: Record<string, boolean> = {};
 
-isUserOnline(userId: string): boolean {
-  if (!userId) return false;
+  isUserOnline(userId: string): boolean {
+    if (!userId) return false;
 
-  if (this.presenceMap.hasOwnProperty(userId)) {
-    return !!this.presenceMap[userId];
+    if (this.presenceMap.hasOwnProperty(userId)) {
+      return !!this.presenceMap[userId];
+    }
+
+    const friend = this.friendsList?.find(f => f.id === userId);
+    if (friend) {
+      return !!friend.isOnline;
+    }
+
+    const m = this.messages.find(x => x.senderId === userId);
+    // @ts-ignore
+    if (m && typeof m.isOnline !== 'undefined') return !!m.isOnline;
+
+    return false;
   }
-
-  const friend = this.friendsList?.find(f => f.id === userId);
-  if (friend) {
-    return !!friend.isOnline;
-  }
-
-  const m = this.messages.find(x => x.senderId === userId);
-  // @ts-ignore
-  if (m && typeof m.isOnline !== 'undefined') return !!m.isOnline;
-
-  return false;
-}
 
   private loadFriendsList(): void {
     this.friendService.getMyFriends().subscribe({
       next: (friends) => {
-        // AI kullanıcıyı ekle (listede yoksa)
         if (!friends.some((f: any) => f.id === AI_USER.id)) {
           const aiFriend = {
             id: AI_USER.id,
             name: AI_USER.name,
             lastName: null,
             profilePhotoUrl: AI_USER.profilePhotoUrl,
-            // Friend arayüzünde zorunlu olabilecek alanlar için makul varsayılanlar
             senderId: this.currentUser?.id ?? '',
             receiverId: AI_USER.id,
             status: 'Accepted',
             requestDate: new Date().toISOString(),
             isBlocked: false,
             isFavorite: false
-          } as any; // TODO: yerine gerçek Friend tipini kullanın
+          } as any;
 
           friends.push(aiFriend);
         }
         this.friendsList = friends;
-        // ilk durum sorgulamasını yap
         this.startPresenceTracking();
       },
-      error: (error) => {
-        console.error('Arkadaş listesi yüklenemedi:', error);
-      }
+      error: () => {}
     });
   }
 
-private startPresenceTracking(): void {
-  this.stopPresenceTracking();
+  private startPresenceTracking(): void {
+    this.stopPresenceTracking();
 
-  this.presenceSub = this.signalRService.presence$.subscribe(payload => {
-    if (!payload || !payload.userId) return;
+    this.presenceSub = this.signalRService.presence$.subscribe(payload => {
+      if (!payload || !payload.userId) return;
 
-    // A) RECONNECT / CLOSED KONTROLÜ
-    if (payload.userId === '____RECONNECTED____') {
-      this.checkFriendsPresence();
-      return;
-    }
-    if (payload.userId === '____CLOSED____') return;
-
-    const isOnline = !!payload.isOnline;
-
-    // B) PRESENCE MAP GÜNCELLEME (Header için kritik)
-    this.presenceMap[payload.userId] = isOnline;
-
-    // C) ARKADAŞ LİSTESİ GÜNCELLEME (Yan menü için kritik)
-    if (this.friendsList) {
-      const f = this.friendsList.find(x => x.id === payload.userId);
-      if (f) {
-        f.isOnline = isOnline;
-        f.lastSeen = isOnline ? null : (payload.lastSeen ? new Date(payload.lastSeen) : f.lastSeen);
+      if (payload.userId === '____RECONNECTED____') {
+        this.checkFriendsPresence();
+        return;
       }
-    }
+      if (payload.userId === '____CLOSED____') return;
 
-    // D) MESAJLARDAKİ DURUMU GÜNCELLEME (Opsiyonel)
-    this.messages.forEach(m => {
-        if (m.senderId === payload.userId) {
-            // @ts-ignore
-            m.isOnline = isOnline; 
+      const isOnline = !!payload.isOnline;
+
+      this.presenceMap[payload.userId] = isOnline;
+
+      if (this.friendsList) {
+        const f = this.friendsList.find(x => x.id === payload.userId);
+        if (f) {
+          f.isOnline = isOnline;
+          f.lastSeen = isOnline ? null : (payload.lastSeen ? new Date(payload.lastSeen) : f.lastSeen);
         }
-    });
-    
-    // Change Detection'ı tetiklemek gerekebilir (Eğer OnPush kullanıyorsanız)
-    // this.cdr.detectChanges(); 
-  });
+      }
 
-  // İlk açılışta toplu sorgu
-  this.checkFriendsPresence();
-  this.presenceIntervalId = setInterval(() => this.checkFriendsPresence(), 30_000);
-}
+      this.messages.forEach(m => {
+          if (m.senderId === payload.userId) {
+              // @ts-ignore
+              m.isOnline = isOnline; 
+          }
+      });
+    });
+
+    this.checkFriendsPresence();
+    this.presenceIntervalId = setInterval(() => this.checkFriendsPresence(), 30_000);
+  }
 
   private stopPresenceTracking(): void {
     if (this.presenceSub) {
@@ -271,8 +253,7 @@ private startPresenceTracking(): void {
   private checkFriendsPresence(): void {
     const ids = (this.friendsList || []).map(f => f.id).filter(Boolean);
     if (ids.length === 0) return;
-    // toplu sorgu - signalr servisinde her id için IsUserOnline çağrısı yapıp presence$ yayımlanacak
-    this.signalRService.refreshPresence(ids).catch(err => console.error('presence refresh error', err));
+    this.signalRService.refreshPresence(ids).catch(() => {});
   }
 
   private navigateToNextFriend(): void {
@@ -391,9 +372,7 @@ private startPresenceTracking(): void {
       attachmentUrl?: string | null,
       attachmentName?: string | null,
       attachmentSize?: number | null
-    ) => {
-      console.log('✅ Mesaj başarıyla iletildi:', { receiverId, content, type, attachmentUrl });
-    });
+    ) => {});
 
     this.signalRService.onMessageRead((messageIds: string[]) => {
       this.messages.forEach(m => {
@@ -415,7 +394,6 @@ private startPresenceTracking(): void {
       name: user.name || user.userName || '',
       avatar: user.profilePhotoUrl || 'assets/default-avatar.png'
     };
-    console.log('Current user set:', this.currentUser);
   }
 
   private initializeChat(): void {
@@ -442,14 +420,12 @@ private startPresenceTracking(): void {
       })
     );
     if (this.receiverUser && this.receiverUser.id) {
-      console.log('receiverUser already set:', this.receiverUser);
       this.loadMessages();
     }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['receiverUser'] && changes['receiverUser'].currentValue && changes['receiverUser'].currentValue.id) {
-      console.log('Receiver user changed:', this.receiverUser);
       if (this.currentUser.id) {
         this.loadMessages();
       }
@@ -462,8 +438,7 @@ private startPresenceTracking(): void {
         const element = this.messagesContainer.nativeElement;
         element.scrollTop = element.scrollHeight;
       }
-    } catch (err) {
-      console.error('Error scrolling to bottom:', err);
+    } catch {
     }
   }
   
@@ -490,7 +465,6 @@ private startPresenceTracking(): void {
     ).length;
   }
 
-
   async openVideoRecorder() {
     try {
       this.showVideoRecorder = true;
@@ -510,14 +484,12 @@ private startPresenceTracking(): void {
           this.videoPreviewElement.nativeElement.play();
         }
       }, 100);
-    } catch (error) {
-      console.error('Kamera/Mikrofon erişim hatası:', error);
+    } catch {
       alert('Kamera veya mikrofona erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.');
       this.showVideoRecorder = false;
     }
   }
 
-  // Video kaydını başlat
   startVideoRecording() {
     if (!this.videoStream) return;
 
@@ -526,13 +498,12 @@ private startPresenceTracking(): void {
 
     const options = {
       mimeType: 'video/webm;codecs=vp9',
-      videoBitsPerSecond: 2500000 // 2.5 Mbps
+      videoBitsPerSecond: 2500000
     };
 
     try {
       this.mediaRecorder = new MediaRecorder(this.videoStream, options);
-    } catch (e) {
-      // Eğer vp9 desteklenmiyorsa, varsayılan codec'i kullan
+    } catch {
       this.mediaRecorder = new MediaRecorder(this.videoStream);
     }
 
@@ -545,15 +516,10 @@ private startPresenceTracking(): void {
     this.mediaRecorder.onstop = () => {
       const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
       this.recordedVideoUrl = URL.createObjectURL(blob);
-      
-      // Blob'u File'a çevir
       const file = new File([blob], `video-${Date.now()}.webm`, {
         type: 'video/webm'
       });
-      
       this.selectedFile = file;
-      
-      // Önizleme videoyu göster
       setTimeout(() => {
         if (this.recordedVideoElement && this.recordedVideoElement.nativeElement) {
           this.recordedVideoElement.nativeElement.src = this.recordedVideoUrl!;
@@ -564,18 +530,14 @@ private startPresenceTracking(): void {
     this.mediaRecorder.start();
     this.isRecording = true;
 
-    // Süre sayacı
     this.recordingTimer = setInterval(() => {
       this.recordingDuration++;
-      
-      // Max süre doldu mu?
       if (this.recordingDuration >= this.maxRecordingDuration) {
         this.stopVideoRecording();
       }
     }, 1000);
   }
 
-  // Video kaydını durdur
   stopVideoRecording() {
     if (this.mediaRecorder && this.isRecording) {
       this.mediaRecorder.stop();
@@ -588,14 +550,12 @@ private startPresenceTracking(): void {
     }
   }
 
-  // Video kaydı süresini formatla
   formatRecordingTime(): string {
     const minutes = Math.floor(this.recordingDuration / 60);
     const seconds = this.recordingDuration % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  // Kalan süreyi formatla
   getRemainingTime(): string {
     const remaining = this.maxRecordingDuration - this.recordingDuration;
     const minutes = Math.floor(remaining / 60);
@@ -603,7 +563,6 @@ private startPresenceTracking(): void {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  // Kaydı tekrar çek
   retakeVideo() {
     if (this.recordedVideoUrl) {
       URL.revokeObjectURL(this.recordedVideoUrl);
@@ -614,7 +573,6 @@ private startPresenceTracking(): void {
     this.recordingDuration = 0;
   }
 
-  // Video kaydediciyi kapat
   closeVideoRecorder() {
     if (this.videoStream) {
       this.videoStream.getTracks().forEach(track => track.stop());
@@ -631,7 +589,6 @@ private startPresenceTracking(): void {
     this.recordingDuration = 0;
   }
 
-  // Kaydedilen videoyu kullan
   useRecordedVideo() {
     if (this.selectedFile) {
       this.selectedFilePreview = this.recordedVideoUrl;
@@ -639,18 +596,15 @@ private startPresenceTracking(): void {
     }
   }
 
-  // Video dosya seçimi (galeri)
   onVideoFileSelected(event: any) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Video mu kontrol et
     if (!file.type.startsWith('video/')) {
       alert('Lütfen geçerli bir video dosyası seçin!');
       return;
     }
 
-    // 50MB kontrolü (videolar daha büyük olabilir)
     if (file.size > 50 * 1024 * 1024) {
       alert('Video boyutu 50MB\'dan büyük olamaz!');
       return;
@@ -658,7 +612,6 @@ private startPresenceTracking(): void {
 
     this.selectedFile = file;
 
-    // Video önizleme
     const reader = new FileReader();
     reader.onload = (e: any) => {
       this.selectedFilePreview = e.target.result;
@@ -666,25 +619,19 @@ private startPresenceTracking(): void {
     reader.readAsDataURL(file);
   }
 
-  // Video süresini al
   getVideoDuration(videoElement: HTMLVideoElement): number {
     return Math.round(videoElement.duration);
   }
 
-  // ============ DOSYA SEÇİMİ GÜNCELLEMESİ ============
-  
-  // Dosya seçimi
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Video ise
     if (file.type.startsWith('video/')) {
       this.onVideoFileSelected(event);
       return;
     }
 
-    // 10MB kontrolü
     if (file.size > 10 * 1024 * 1024) {
       alert('Dosya boyutu 10MB\'dan büyük olamaz!');
       return;
@@ -692,7 +639,6 @@ private startPresenceTracking(): void {
 
     this.selectedFile = file;
 
-    // Resim ise önizleme göster
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e: any) => {
@@ -704,14 +650,11 @@ private startPresenceTracking(): void {
     }
   }
 
-  // Dosya iptal
   cancelFile() {
     this.selectedFile = null;
     this.selectedFilePreview = null;
   }
 
-  // Mesaj gönder (dosya varsa dosyayla)
-  // Mesaj gönderirken dosya gönderirken notification gösterme!
  async sendMessage() {
   if (this.selectedFile) {
     await this.sendMessageWithFile();
@@ -720,14 +663,11 @@ private startPresenceTracking(): void {
   await this.sendTextMessage();
 }
 
-  // Normal metin mesajı gönder
   async sendTextMessage() {
     if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
 
-    // AI kullanıcıya mesaj gönderiliyorsa AiService ile iletişim kur
     if (this.receiverUser.id === AI_USER.id) {
       const userMsg = this.messageText.trim();
-      // Kullanıcının mesajını UI'ya ekle
       this.messages.push({
         id: Date.now().toString(),
         senderId: this.currentUser.id,
@@ -745,7 +685,6 @@ private startPresenceTracking(): void {
         const resp = await this.messageService.ask(this.currentUser.id, userMsg).toPromise();
         const aiText = resp?.response || resp?.text || 'Yanıt alınamadı.';
 
-        // AI cevabını UI'ya ekle
         this.messages.push({
           id: (Date.now() + 1).toString(),
           senderId: AI_USER.id,
@@ -790,9 +729,8 @@ private startPresenceTracking(): void {
         this.messages.push(newMessage);
         this.messageText = '';
         
-        this.shouldScrollToBottom = true; // ✅ Mesaj gönderince scroll yap
+        this.shouldScrollToBottom = true;
 
-        // Not: client'tan SignalR ile direkt gönderim yapılmayacak — backend mesajı kendi broadcast eder.
         this.messageBroadcast.notifyNewMessage({
           friendId: this.receiverUser.id,
           content: command.content,
@@ -802,10 +740,8 @@ private startPresenceTracking(): void {
           isOwn: true,
           type: MessageType.Text
         });
-        // Mesaj gönderildi notification kaldırıldı!
       }
     } catch (error: any) {
-      // Sadece hata durumunda notification göster
       this.notificationService.show(error.message || 'Mesaj gönderilemedi!', 'error');
     }
   }
@@ -853,8 +789,6 @@ private startPresenceTracking(): void {
         this.selectedFilePreview = null;
         this.shouldScrollToBottom = true;
         
-        // Not: client'tan SignalR ile direkt gönderim yapılmayacak — backend mesajı kendi broadcast eder.
-        
         this.messageBroadcast.notifyNewMessage({
           friendId: this.receiverUser.id,
           content: messageCommand.content,
@@ -866,10 +800,8 @@ private startPresenceTracking(): void {
           attachmentUrl: messageCommand.attachmentUrl,
           attachmentName: messageCommand.attachmentName
         });
-        // Dosya ile mesaj gönderildi notification kaldırıldı!
       }
     } catch (error: any) {
-      // Sadece hata durumunda notification göster
       this.notificationService.show(error.message || 'Dosya gönderilemedi!', 'error');
     } finally {
       this.isUploading = false;
@@ -916,12 +848,10 @@ private startPresenceTracking(): void {
 
     let finalUrl = url;
 
-    // Eğer rota backend tarafında /uploads/... şeklindeyse, apiUrl ile tamamla
     if (url.startsWith('/uploads') || url.startsWith('uploads')) {
       const base = environment.apiUrl?.replace(/\/$/, '') || '';
       finalUrl = url.startsWith('/') ? base + url : base + '/' + url;
     } else if (!/^https?:\/\//i.test(url)) {
-      // göreli diğer yollar için de backend'e bağla
       const base = environment.apiUrl?.replace(/\/$/, '') || '';
       finalUrl = base + '/' + url.replace(/^\//, '');
     }
@@ -929,18 +859,16 @@ private startPresenceTracking(): void {
     window.open(finalUrl, '_blank', 'noopener');
   }
 
-  // Kamerayı aç
   async openCamera() {
     try {
       this.showCamera = true;
       
-      // Biraz bekle ki ViewChild initialize olsun
       setTimeout(async () => {
         this.cameraStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            facingMode: 'user' // Ön kamera
+            facingMode: 'user'
           },
           audio: false
         });
@@ -950,13 +878,12 @@ private startPresenceTracking(): void {
           this.videoElement.nativeElement.play();
         }
       }, 100);
-    } catch (error) {
-      this.notificationService.show('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.', 'error'); // EKLE
+    } catch {
+      this.notificationService.show('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.', 'error');
       this.showCamera = false;
     }
   }
 
-  // Fotoğraf çek
   capturePhoto() {
     if (!this.videoElement || !this.canvasElement) return;
 
@@ -966,36 +893,28 @@ private startPresenceTracking(): void {
 
     if (!context) return;
 
-    // Canvas boyutunu video boyutuna ayarla
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Video frame'ini canvas'a çiz
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Canvas'ı Blob'a çevir
     canvas.toBlob((blob) => {
       if (blob) {
-        // Blob'u File objesine çevir
         const file = new File([blob], `camera-${Date.now()}.jpg`, {
           type: 'image/jpeg'
         });
 
-        // Canvas'tan base64 al (önizleme için)
         this.capturedImage = canvas.toDataURL('image/jpeg', 0.9);
         
-        // Dosya olarak kaydet
         this.selectedFile = file;
         this.selectedFilePreview = this.capturedImage;
 
-        // Kamerayı kapat
         this.stopCamera();
-        this.notificationService.show('Fotoğraf çekildi!', 'success'); // EKLE
+        this.notificationService.show('Fotoğraf çekildi!', 'success');
       }
     }, 'image/jpeg', 0.9);
   }
 
-  // Kamerayı kapat
   stopCamera() {
     if (this.cameraStream) {
       this.cameraStream.getTracks().forEach(track => track.stop());
@@ -1005,7 +924,6 @@ private startPresenceTracking(): void {
     this.capturedImage = null;
   }
 
-  // Fotoğrafı tekrar çek
   retakePhoto() {
     this.capturedImage = null;
     this.selectedFile = null;
@@ -1017,63 +935,61 @@ private startPresenceTracking(): void {
     this.showUserMenu = !this.showUserMenu;
   }
 
-async removeFriend() {
-  this.notificationService.show(
-    `${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`,
-    'confirm',
-    {
-      // Custom alan ekliyoruz, notification componentinde kullanacaksınız!
-      action: () => {
-        this.friendService.removeFriend(this.receiverUser.id).subscribe({
-          next: () => {
-            this.showUserMenu = false;
-            this.notificationService.show('Arkadaş başarıyla silindi.', 'success');
-            window.location.reload();
-          },
-          error: () => {
-            this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
-          }
-        });
-      }
-    }
-  );
-}
-
-async blockUser() {
-  this.notificationService.show(
-    `${this.getReceiverFullName()} kişisini engellemek istediğinize emin misiniz? Bu kişi size mesaj gönderemeyecek.`,
-    'confirm',
-    {
-      action: () => {
-        this.friendService.blockUser(this.currentUser.id, this.receiverUser.id).subscribe({
-          next: (response) => {
-            if (response.isSuccess) {
-              this.notificationService.show('Kullanıcı başarıyla engellendi.', 'success');
+  async removeFriend() {
+    this.notificationService.show(
+      `${this.getReceiverFullName()} kişisini arkadaş listesinden silmek istediğinize emin misiniz?`,
+      'confirm',
+      {
+        action: () => {
+          this.friendService.removeFriend(this.receiverUser.id).subscribe({
+            next: () => {
               this.showUserMenu = false;
-              this.friendService.getMyFriends().subscribe({
-                next: (friends) => {
-                  this.friendsList = friends;
-                  this.navigateToNextFriend();
-                },
-                error: () => {
-                  this.navigateToNextFriend();
-                }
-              });
-            } else {
-              this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+              this.notificationService.show('Arkadaş başarıyla silindi.', 'success');
+              window.location.reload();
+            },
+            error: () => {
+              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
             }
-          },
-          error: () => {
-            this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
-          }
-        });
+          });
+        }
       }
-    }
-  );
-}
+    );
+  }
+
+  async blockUser() {
+    this.notificationService.show(
+      `${this.getReceiverFullName()} kişisini engellemek istediğinize emin misiniz? Bu kişi size mesaj gönderemeyecek.`,
+      'confirm',
+      {
+        action: () => {
+          this.friendService.blockUser(this.currentUser.id, this.receiverUser.id).subscribe({
+            next: (response) => {
+              if (response.isSuccess) {
+                this.notificationService.show('Kullanıcı başarıyla engellendi.', 'success');
+                this.showUserMenu = false;
+                this.friendService.getMyFriends().subscribe({
+                  next: (friends) => {
+                    this.friendsList = friends;
+                    this.navigateToNextFriend();
+                  },
+                  error: () => {
+                    this.navigateToNextFriend();
+                  }
+                });
+              } else {
+                this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+              }
+            },
+            error: () => {
+              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+            }
+          });
+        }
+      }
+    );
+  }
 
 }
-
 
 const AI_USER = {
   id: 'ai-bot',
