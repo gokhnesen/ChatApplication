@@ -364,3 +364,16 @@ FodyWeavers.xsd
 /ChatApplicationAPI.API/appsettings.json
 /ChatApplicationAPI.API/wwwroot
 /ChatApplicationAPI.API/appsettings.json
+# --- Option A: Ignore entire wwwroot directory ---
+/wwwroot/
+
+# If you prefer to keep the folder but ignore its contents except a .gitkeep:
+#/wwwroot/*
+#!/wwwroot/.gitkeep
+
+# --- Option B: Ignore only generated/uploaded content inside wwwroot ---
+# (uncomment Option B and comment Option A if you prefer selective ignores)
+/wwwroot/uploads/
+/wwwroot/temp/
+/wwwroot/avatars/
+/wwwroot/*.log
