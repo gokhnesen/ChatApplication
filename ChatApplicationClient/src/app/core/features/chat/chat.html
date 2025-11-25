@@ -49,7 +49,7 @@
                 [alt]="msg.attachmentName || 'Resim'"
                 (click)="openImagePreview(msg.attachmentUrl)"
                 class="chat-image"
-                (error)="onImageError($event)">
+              />
               <p class="image-caption" *ngIf="msg.content !== msg.attachmentName">{{ msg.content }}</p>
             </div>
 
@@ -372,7 +372,6 @@
   <div class="image-modal" *ngIf="imagePreviewUrl" (click)="closeImagePreview()">
     <div class="image-modal-content" (click)="$event.stopPropagation()">
       <button class="image-modal-close" (click)="closeImagePreview()" aria-label="Kapat">×</button>
-      <img [src]="imagePreviewUrl" alt="Resim önizleme" (error)="onImageError($event)" />
     </div>
   </div>
 </div>

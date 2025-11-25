@@ -1,10 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-// Yeni import'lar
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { take } from 'rxjs/operators';
-// Servis
 import { UserService } from '../../../services/user-service';
 
 @Component({

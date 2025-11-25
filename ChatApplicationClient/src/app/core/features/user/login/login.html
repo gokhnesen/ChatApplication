@@ -10,42 +10,42 @@
       <p>Hesabınıza giriş yapın</p>
     </div>
 
-    <form (ngSubmit)="login()" class="login-form" novalidate>
+    <form [formGroup]="loginForm" (ngSubmit)="login()" class="login-form" novalidate>
       <div class="form-group">
         <label for="email">Email</label>
         <div class="input-wrapper">
-          <input 
+          <input
             id="email"
-            [(ngModel)]="email" 
-            name="email" 
-            type="email" 
-            placeholder="ornek@email.com" 
-            required 
+            formControlName="email"
+            type="email"
+            placeholder="ornek@email.com"
             autocomplete="email"
-            [disabled]="isLoading"
-            (blur)="emailTouched = true" />
+            [disabled]="isLoading" />
         </div>
-        <div class="field-error" *ngIf="emailError && (emailTouched || attemptedLogin)">{{ emailError }}</div>
+        <div class="field-error" *ngIf="f.email.touched || f.email.dirty">
+          <div *ngIf="f.email.hasError('required')">Email zorunlu.</div>
+          <div *ngIf="f.email.hasError('email')">Geçerli bir email girin.</div>
+        </div>
       </div>
 
       <div class="form-group">
         <label for="password">Şifre</label>
         <div class="input-wrapper">
-          <input 
+          <input
             id="password"
-            [(ngModel)]="password" 
-            name="password" 
-            [type]="showPassword ? 'text' : 'password'" 
-            placeholder="••••••••" 
-            required 
+            formControlName="password"
+            [type]="showPassword ? 'text' : 'password'"
+            placeholder="••••••••"
             autocomplete="current-password"
-            [disabled]="isLoading"
-            (blur)="passwordTouched = true" />
+            [disabled]="isLoading" />
           <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" [disabled]="isLoading">
             <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
           </button>
         </div>
-        <div class="field-error" *ngIf="passwordError && (passwordTouched || attemptedLogin)">{{ passwordError }}</div>
+        <div class="field-error" *ngIf="f.password.touched || f.password.dirty">
+          <div *ngIf="f.password.hasError('required')">Şifre zorunlu.</div>
+          <div *ngIf="f.password.hasError('minlength')">Şifre en az 6 karakter olmalı.</div>
+        </div>
       </div>
 
       <div class="error-message" *ngIf="error">
@@ -53,7 +53,7 @@
         <span>{{ error }}</span>
       </div>
 
-      <button type="submit" class="login-btn" [disabled]="isLoading || !canSubmit()">
+      <button type="submit" class="login-btn" [disabled]="isLoading || loginForm.invalid">
         <span *ngIf="!isLoading">Giriş Yap</span>
         <span *ngIf="isLoading" class="loading-spinner">
           <i class="fas fa-spinner fa-spin"></i>
@@ -61,22 +61,21 @@
         </span>
       </button>
 
-   <div class="divider">
-  <span>veya</span>
-</div>
+      <div class="divider">
+        <span>veya</span>
+      </div>
 
-<div class="social-login">
-  <button type="button" class="social-btn google" (click)="onExternalLogin('Google')" [disabled]="isLoading">
-    <i class="fab fa-google"></i>
-    <span>Google ile Giriş</span>
-  </button>
+      <div class="social-login">
+        <button type="button" class="social-btn google" (click)="onExternalLogin('Google')" [disabled]="isLoading">
+          <i class="fab fa-google"></i>
+          <span>Google ile Giriş</span>
+        </button>
 
-  <button type="button" class="social-btn microsoft" (click)="onExternalLogin('Microsoft')" [disabled]="isLoading">
-    <i class="fab fa-microsoft"></i>
-    <span>Microsoft ile Giriş</span>
-  </button>
-</div>
-      
+        <button type="button" class="social-btn microsoft" (click)="onExternalLogin('Microsoft')" [disabled]="isLoading">
+          <i class="fab fa-microsoft"></i>
+          <span>Microsoft ile Giriş</span>
+        </button>
+      </div>
     </form>
 
     <div class="login-footer">

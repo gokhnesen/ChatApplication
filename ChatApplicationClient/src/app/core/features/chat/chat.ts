@@ -816,9 +816,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
-  onImageError(event: any) {
-    event.target.src = 'assets/image-error.png';
-  }
 
   closeImagePreview() {
     this.imagePreviewUrl = null;
