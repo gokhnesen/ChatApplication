@@ -27,14 +27,12 @@ export class Settings implements OnInit {
   blockedUsers: any[] = [];
   isLoadingBlocked = false;
 
-  // ✅ YENİ: Arkadaş listesi ve modal
   friendsList: any[] = [];
   showAddBlockModal = false;
   isLoadingFriends = false;
   searchFriendText = '';
   filteredFriends: any[] = [];
 
-  // Profil düzenleme
   isEditingProfile = false;
   editForm = {
     name: '',
@@ -42,17 +40,14 @@ export class Settings implements OnInit {
     userName: ''
   };
 
-  // Profil fotoğrafı
   selectedFile: File | null = null;
   isUploadingPhoto = false;
 
-  // durum izleme - template ngModel için
   nameTouched = false;
   lastNameTouched = false;
   attemptedSave = false;
   CustomValidators: any;
 
-  // ------ Yeni: Şifre değiştirme modal ve form alanları
   showChangePasswordModal = false;
   passwordForm = {
     currentPassword: '',
@@ -61,7 +56,6 @@ export class Settings implements OnInit {
   };
   attemptedChange = false;
 
-  // göz butonları için state
   showCurrentPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
@@ -112,7 +106,6 @@ export class Settings implements OnInit {
     this.loadFriendsList();
   }
 
-  // ✅ YENİ: Modalı kapat
   closeAddBlockModal(): void {
     this.showAddBlockModal = false;
     this.friendsList = [];
@@ -120,12 +113,10 @@ export class Settings implements OnInit {
     this.searchFriendText = '';
   }
 
-  // ✅ YENİ: Arkadaş listesini yükle (engellenmemiş olanlar)
   loadFriendsList(): void {
     this.isLoadingFriends = true;
     this.friendService.getMyFriends().subscribe({
       next: (friends) => {
-        // Zaten engellenenler hariç
         const blockedIds = this.blockedUsers.map(u => u.id);
         this.friendsList = friends.filter(f => !blockedIds.includes(f.id));
         this.filteredFriends = [...this.friendsList];
@@ -138,7 +129,6 @@ export class Settings implements OnInit {
     });
   }
 
-  // ✅ YENİ: Arkadaş ara
   filterFriends(): void {
     if (!this.searchFriendText.trim()) {
       this.filteredFriends = [...this.friendsList];
@@ -153,7 +143,6 @@ export class Settings implements OnInit {
     );
   }
 
-  // ✅ YENİ: Arkadaşı engelle
   blockFriend(friend: any): void {
     this.notificationService.show(
       `${friend.name} ${friend.lastName} kişisini engellemek istediğinize emin misiniz?`,
@@ -184,7 +173,6 @@ export class Settings implements OnInit {
     );
   }
 
-  // Profil düzenleme
   startEditProfile(): void {
     this.isEditingProfile = true;
   }
@@ -196,11 +184,9 @@ export class Settings implements OnInit {
     this.editForm.userName = this.currentUser.userName;
   }
 
-  // blur eventleri (template'den çağır)
   onNameBlur(): void { this.nameTouched = true; }
   onLastNameBlur(): void { this.lastNameTouched = true; }
 
-  // alan hatası kontrolü (ngModel kullanımıyla CustomValidators çağırılır)
   hasNameError(): boolean {
     const control = { value: this.editForm.name } as AbstractControl;
     const notWs = !!CustomValidators.notWhitespace(control);
@@ -218,7 +204,6 @@ export class Settings implements OnInit {
   saveProfile(): void {
     this.attemptedSave = true;
 
-    // Validasyon (ngModel tabanlı)
     if (this.hasNameError() || this.hasLastNameError()) {
       this.notificationService.show('Lütfen isim ve soyadı alanlarını kontrol edin.', 'error');
       return;
@@ -234,16 +219,27 @@ export class Settings implements OnInit {
 
     this.userService.updateProfile(data).subscribe({
       next: (response) => {
-        if (response.isSuccess) {
-          this.currentUser.name = this.editForm.name;
-          this.currentUser.lastName = this.editForm.lastName;
+        const respondedUser = response?.data ?? response?.user ?? response;
+        const isSuccessFlag = response?.isSuccess === true || response?.success === true || response?.status === 'success';
+        const looksLikeUserObj = !!(respondedUser && (respondedUser.id || respondedUser.userId || respondedUser.name));
+
+        if (isSuccessFlag || looksLikeUserObj) {
+          if (looksLikeUserObj) {
+            this.currentUser = { ...this.currentUser, ...respondedUser };
+          } else {
+            this.currentUser.name = this.editForm.name;
+            this.currentUser.lastName = this.editForm.lastName;
+            this.currentUser.userName = this.editForm.userName;
+          }
+
           this.isEditingProfile = false;
           this.attemptedSave = false;
           this.nameTouched = false;
           this.lastNameTouched = false;
-          this.notificationService.show('Profil güncellendi!', 'success');
+          this.notificationService.show(response?.message ?? 'Profil güncellendi!', 'success');
+
         } else {
-          this.notificationService.show(response.message || 'Profil güncellenemedi.', 'error');
+          this.notificationService.show(response?.message || 'Profil güncellenemedi.', 'error');
         }
       },
       error: (error) => {
@@ -253,7 +249,6 @@ export class Settings implements OnInit {
     });
   }
 
-  // Profil fotoğrafı yükleme
   onPhotoSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
@@ -266,11 +261,9 @@ export class Settings implements OnInit {
     if (!this.selectedFile || !this.currentUser) return;
 
     this.isUploadingPhoto = true;
-    const userId = this.currentUser.id || this.currentUser.userId; // ID garantisi
+    const userId = this.currentUser.id || this.currentUser.userId; 
 
-    // 1. Önce fotoğrafı yükle
     this.userService.uploadProfilePhoto(this.selectedFile, userId).pipe(
-      // İşlem bitince (başarılı veya hatalı) loading'i kapat ve dosyayı temizle
       finalize(() => {
         this.isUploadingPhoto = false;
         this.selectedFile = null;
@@ -280,11 +273,9 @@ export class Settings implements OnInit {
         if (response.isSuccess) {
           this.notificationService.show('Profil fotoğrafı başarıyla güncellendi!', 'success');
           
-          // 2. Fotoğraf yüklendi, şimdi güncel URL'i almak için kullanıcı bilgisini yenile
-          // VEYA backend response içinde yeni URL dönüyorsa direkt onu atayın:
-          // this.currentUser.profilePhotoUrl = response.data.newUrl;
+
           
-          this.loadUserInfo(); // En garantisi bilgileri tazelemektir
+          this.loadUserInfo(); 
         } else {
           this.notificationService.show(response.message || 'Yükleme başarısız.', 'error');
         }
@@ -296,7 +287,6 @@ export class Settings implements OnInit {
     });
   }
 
-  // ✅ Engeli kaldır (notification ile)
   unblockUser(user: any): void {
     this.notificationService.show(
       `${user.name} ${user.lastName} kişisinin engelini kaldırmak istediğinize emin misiniz?`,
@@ -322,7 +312,6 @@ export class Settings implements OnInit {
     );
   }
 
-  // Arkadaşlık kodunu kopyala
   copyFriendCode(): void {
     if (this.currentUser?.friendCode) {
       navigator.clipboard.writeText(this.currentUser.friendCode).then(() => {
@@ -331,8 +320,6 @@ export class Settings implements OnInit {
     }
   }
 
-  // ---------- Yeni: şifre gösterimi (kare sayısı)
-  // Backend password length sağlıyorsa kullanılır, yoksa varsayılan 8 gösterilir
   get passwordMaskCount(): number {
     return this.currentUser?.passwordLength ?? 8;
   }
@@ -340,7 +327,6 @@ export class Settings implements OnInit {
     return new Array(this.passwordMaskCount);
   }
 
-  // ---------- Yeni: Şifre değiştir modal kontrolleri
   openChangePasswordModal(): void {
     this.showChangePasswordModal = true;
     this.passwordForm.currentPassword = '';
@@ -348,7 +334,6 @@ export class Settings implements OnInit {
     this.passwordForm.confirmPassword = '';
     this.attemptedChange = false;
 
-    // reset göz durumları
     this.showCurrentPassword = false;
     this.showNewPassword = false;
     this.showConfirmPassword = false;
@@ -363,24 +348,20 @@ export class Settings implements OnInit {
   }
 
   private makeControl(value: any): AbstractControl {
-    // basit "sahte" AbstractControl nesnesi ngModel ile validasyon kullanımı için
     return { value } as AbstractControl;
   }
 
   hasCurrentPasswordError(): boolean {
-    // zorunlu kontrol: boş olamaz
     const val = this.passwordForm.currentPassword || '';
     return val.trim().length === 0;
   }
 
   hasNewPasswordError(): boolean {
     const control = this.makeControl(this.passwordForm.newPassword);
-    // passwordStrength dönerse hata objesi veya null
     const res = CustomValidators.passwordStrength(8)(control as AbstractControl);
     return !!res;
   }
 
-  // Yeni: mevcut şifre ile yeni şifre aynı mı kontrolü
   isNewPasswordSameAsCurrent(): boolean {
     const current = (this.passwordForm.currentPassword || '').trim();
     const nw = (this.passwordForm.newPassword || '').trim();
@@ -415,7 +396,6 @@ export class Settings implements OnInit {
       return;
     }
 
-    // Backend'in beklediği userId alanını ekleyin (varsa session/cookie yerine)
     const userId = this.currentUser?.userId ?? this.currentUser?.id ?? this.currentUser?.userID ?? null;
     if (!userId) {
       this.notificationService.show('Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.', 'error');
@@ -441,7 +421,6 @@ export class Settings implements OnInit {
     });
   }
 
-  // Hesap silme onayı + işlem
   confirmDeleteAccount(): void {
     const userId = this.currentUser?.userId ?? this.currentUser?.id ?? this.currentUser?.userID ?? null;
     if (!userId) {

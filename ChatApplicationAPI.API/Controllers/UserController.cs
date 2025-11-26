@@ -87,23 +87,19 @@ namespace ChatApplicationAPI.API.Controllers
         {
             try
             {
-                // 1. Yetkili Kullanıcının ID'sini al (Bu ID, veritabanında güncellenecek olan kullanıcıdır)
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userId))
                 {
                     return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
                 }
 
-                // ... (Dosya boyutu ve uzantı kontrolleri, dosya kaydetme işlemleri) ...
 
                 if (model.Photo == null || model.Photo.Length == 0)
                 {
                     return BadRequest(new { IsSuccess = false, Message = "Fotoğraf bulunamadı." });
                 }
 
-                // Boyut ve uzantı kontrollerini burada atlıyorum, sizin kodunuzda zaten var.
 
-                // Dosyayı kaydetme bölümü:
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
                 {
@@ -127,19 +123,15 @@ namespace ChatApplicationAPI.API.Controllers
 
                 var url = $"/uploads/profiles/{fileName}";
 
-                // 2. KULLANICI NESNESİNİ GÜNCELLEME İŞLEMİ (EKLENEN KISIM)
 
-                // User Manager ile mevcut kullanıcıyı bul
                 var user = await _userManager.FindByIdAsync(userId);
                 if (user == null)
                 {
                     return NotFound(new { IsSuccess = false, Message = "Kullanıcı veritabanında bulunamadı." });
                 }
 
-                // URL'i kullanıcı nesnesine ata
                 user.ProfilePhotoUrl = url;
 
-                // Veritabanına kaydet
                 var updateResult = await _userManager.UpdateAsync(user);
 
                 if (!updateResult.Succeeded)
@@ -147,7 +139,6 @@ namespace ChatApplicationAPI.API.Controllers
                     return StatusCode(500, new { IsSuccess = false, Message = "Veritabanı güncelleme hatası.", Errors = updateResult.Errors });
                 }
 
-                // 3. Başarılı yanıtı döndür
                 return Ok(new
                 {
                     IsSuccess = true,

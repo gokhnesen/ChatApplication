@@ -9,6 +9,22 @@
   padding: 20px;
   position: relative;
   overflow: hidden;
+
+  /* allow vertical touch scrolling, prevent horizontal */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* smooth touch scrolling on iOS */
+  touch-action: pan-y; /* only allow vertical pan */
+  overscroll-behavior: contain; /* prevent parent/page from scrolling when reaching edges */
+
+  /* hide scrollbar (Chrome, Safari, Edge, Firefox, IE) */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.login-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ✅ YENİ: Google'dan dönüldüğünde çıkan Loading Ekranı */
@@ -34,10 +50,10 @@
 }
 
 .login-card {
-  background: #202c33; // ✅ WhatsApp card color
+  background: #202c33; 
   border-radius: 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 1px solid #2a3942; // ✅ WhatsApp border
+  border: 1px solid #2a3942; 
   width: 100%;
   max-width: 440px;
   padding: 48px 40px;
@@ -45,6 +61,21 @@
   z-index: 1;
   animation: slideUp 0.5s ease;
   margin: auto;
+
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.login-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .login-header {
