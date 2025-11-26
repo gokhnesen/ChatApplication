@@ -106,11 +106,40 @@ export class UserService {
     );
   }
 
-  uploadProfilePhoto(file: File): Observable<any> {
+// UserService içindeki mevcut uploadProfilePhoto metodunu bununla değiştirin
+uploadProfilePhoto(file: File, userId?: string): Observable<any> {
     const formData = new FormData();
-    formData.append('photo', file);
-    return this.httpClient.post(`${this.apiUrl}/user/upload-profile-photo`, formData, { withCredentials: true });
-  }
+    formData.append('photo', file); 
+    
+    // Güvenlik için: ID'yi sunucuya göndermeniz gerekiyorsa kalsın
+    if (userId) {
+        formData.append('userId', userId);
+    }
+
+    return this.httpClient.post<any>(`${this.apiUrl}/user/upload-profile-photo`, formData, { withCredentials: true })
+        .pipe(
+            tap((res) => {
+                if (res.isSuccess && res.profilePhotoUrl) {
+                    
+                    this.currentUser.update(user => {
+                        if (user) {
+                          
+                            const newUrl = res.profilePhotoUrl + `?t=${Date.now()}`;
+
+                            return { 
+                                ...user, 
+                                profilePhotoUrl: newUrl 
+                            };
+                        }
+                        return user; // Kullanıcı yoksa değişiklik yapma
+                    });
+                    
+                    // Cache'i temizle, sonraki istek yeni veriyi çeksin
+                    this.userInfoCache$ = undefined; 
+                }
+            })
+        );
+}
 
   searchUsers(searchTerm: string): Observable<any> {
     return this.httpClient.get(`${this.apiUrl}/User/list?searchTerm=${searchTerm}`);

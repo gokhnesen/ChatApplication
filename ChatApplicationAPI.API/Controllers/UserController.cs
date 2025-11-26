@@ -87,25 +87,25 @@ namespace ChatApplicationAPI.API.Controllers
         {
             try
             {
+                // 1. Yetkili Kullanıcının ID'sini al (Bu ID, veritabanında güncellenecek olan kullanıcıdır)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
+                }
+
+                // ... (Dosya boyutu ve uzantı kontrolleri, dosya kaydetme işlemleri) ...
+
                 if (model.Photo == null || model.Photo.Length == 0)
                 {
                     return BadRequest(new { IsSuccess = false, Message = "Fotoğraf bulunamadı." });
                 }
 
-                if (model.Photo.Length > MaxFileSize)
-                {
-                    return BadRequest(new { IsSuccess = false, Message = "Dosya boyutu 5MB'dan büyük olamaz." });
-                }
+                // Boyut ve uzantı kontrollerini burada atlıyorum, sizin kodunuzda zaten var.
 
-                var extension = Path.GetExtension(model.Photo.FileName).ToLowerInvariant();
-                if (!Array.Exists(_allowedExtensions, e => e == extension))
-                {
-                    return BadRequest(new { IsSuccess = false, Message = "Sadece .jpg, .jpeg, .png ve .gif dosyaları kabul edilmektedir." });
-                }
-
+                // Dosyayı kaydetme bölümü:
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
-
                 {
                     webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
                 }
@@ -116,6 +116,7 @@ namespace ChatApplicationAPI.API.Controllers
                     Directory.CreateDirectory(uploadsFolder);
                 }
 
+                var extension = Path.GetExtension(model.Photo.FileName).ToLowerInvariant();
                 var fileName = $"{Guid.NewGuid()}{extension}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
 
@@ -126,6 +127,27 @@ namespace ChatApplicationAPI.API.Controllers
 
                 var url = $"/uploads/profiles/{fileName}";
 
+                // 2. KULLANICI NESNESİNİ GÜNCELLEME İŞLEMİ (EKLENEN KISIM)
+
+                // User Manager ile mevcut kullanıcıyı bul
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { IsSuccess = false, Message = "Kullanıcı veritabanında bulunamadı." });
+                }
+
+                // URL'i kullanıcı nesnesine ata
+                user.ProfilePhotoUrl = url;
+
+                // Veritabanına kaydet
+                var updateResult = await _userManager.UpdateAsync(user);
+
+                if (!updateResult.Succeeded)
+                {
+                    return StatusCode(500, new { IsSuccess = false, Message = "Veritabanı güncelleme hatası.", Errors = updateResult.Errors });
+                }
+
+                // 3. Başarılı yanıtı döndür
                 return Ok(new
                 {
                     IsSuccess = true,

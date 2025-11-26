@@ -262,25 +262,38 @@ export class Settings implements OnInit {
     }
   }
 
-  uploadPhoto(): void {
-    if (!this.selectedFile) return;
+ uploadPhoto(): void {
+    if (!this.selectedFile || !this.currentUser) return;
 
     this.isUploadingPhoto = true;
-        this.userService.getUserInfo().pipe(
-              tap(user => { 
-                  // Yerel state'i güncelle, gerekliyse
-                  this.currentUser = user; 
-              }),
-              finalize(() => {
-                  this.isUploadingPhoto = false;
-                  this.selectedFile = null;
-              })
-          ).subscribe(() => {
-              this.notificationService.show('Profil fotoğrafı başarıyla güncellendi!', 'success');
-          }, error => {
-              this.notificationService.show('Fotoğraf yüklenirken hata oluştu.', 'error');
-          });
+    const userId = this.currentUser.id || this.currentUser.userId; // ID garantisi
 
+    // 1. Önce fotoğrafı yükle
+    this.userService.uploadProfilePhoto(this.selectedFile, userId).pipe(
+      // İşlem bitince (başarılı veya hatalı) loading'i kapat ve dosyayı temizle
+      finalize(() => {
+        this.isUploadingPhoto = false;
+        this.selectedFile = null;
+      })
+    ).subscribe({
+      next: (response) => {
+        if (response.isSuccess) {
+          this.notificationService.show('Profil fotoğrafı başarıyla güncellendi!', 'success');
+          
+          // 2. Fotoğraf yüklendi, şimdi güncel URL'i almak için kullanıcı bilgisini yenile
+          // VEYA backend response içinde yeni URL dönüyorsa direkt onu atayın:
+          // this.currentUser.profilePhotoUrl = response.data.newUrl;
+          
+          this.loadUserInfo(); // En garantisi bilgileri tazelemektir
+        } else {
+          this.notificationService.show(response.message || 'Yükleme başarısız.', 'error');
+        }
+      },
+      error: (error) => {
+        console.error('Fotoğraf yükleme hatası:', error);
+        this.notificationService.show('Fotoğraf yüklenirken bir hata oluştu.', 'error');
+      }
+    });
   }
 
   // ✅ Engeli kaldır (notification ile)
