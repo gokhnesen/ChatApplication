@@ -124,13 +124,13 @@ export class Register {
           if (uploadResult?.isSuccess) {
             profilePhotoUrl = uploadResult.profilePhotoUrl;
           } else {
-            this.error = uploadResult?.message || 'Fotoğraf yüklenirken bir hata oluştu.';
+            this.error = 'Fotoğraf yüklenirken bir hata oluştu. Lütfen tekrar deneyin.';
             this.isUploading = false;
             return;
           }
         } catch (uploadError: any) {
           console.error('Photo upload error:', uploadError);
-          this.error = 'Fotoğraf yüklenemedi: ' + (uploadError.message || 'Bilinmeyen hata');
+          this.error = 'Fotoğraf yüklenemedi. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.';
           this.isUploading = false;
           return;
         }
@@ -152,20 +152,37 @@ export class Register {
               this.router.navigate(['/login']);
             }, 2000);
           } else {
-            localStorage.setItem('isAuthenticated', 'false');
-            this.error = res.message || 'Kayıt başarısız!';
+            this.handleRegistrationError(res);
           }
         },
         error: (err) => {
-          this.isUploading = false;
-          localStorage.setItem('isAuthenticated', 'false');
-          this.error = err.error?.message || 'Kayıt sırasında bir hata oluştu.';
-          console.error('Registration error:', err);
+          this.handleRegistrationError(err);
         }
       });
     } catch (error: any) {
       this.isUploading = false;
-      this.error = error.message || 'İşlem sırasında bir hata oluştu.';
+      this.error = 'İşlem sırasında beklenmedik bir hata oluştu.';
+      console.error('Unexpected registration error:', error);
+    }
+  }
+
+  private handleRegistrationError(errorSource: any) {
+    this.isUploading = false;
+    localStorage.setItem('isAuthenticated', 'false');
+
+    const message = errorSource?.error?.message || errorSource?.message || '';
+    
+    console.error('Registration error details:', errorSource);
+
+    if (message.toLowerCase().includes('email') && message.toLowerCase().includes('zaten')) {
+      this.error = 'Bu e-posta adresi zaten kayıtlı.';
+    } else if (message.toLowerCase().includes('username') && message.toLowerCase().includes('zaten')) {
+      this.error = 'Bu kullanıcı adı zaten alınmış.';
+    } else if (message.toLowerCase().includes('zaten kullanılıyor')) {
+      this.error = 'Girdiğiniz e-posta veya kullanıcı adı zaten kullanılıyor.';
+    }
+    else {
+      this.error = 'Kayıt sırasında bir hata oluştu. Lütfen bilgilerinizi kontrol edip tekrar deneyin.';
     }
   }
 }

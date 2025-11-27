@@ -8,9 +8,6 @@ import { environment } from '../../../environments/environment';
 export class AttachFilePipe implements PipeTransform {
   private readonly baseUrl = environment.apiUrl.replace('/api', '');
   
-  // İki farklı kullanım: 
-  // 1. Dosya boyutu formatla: {{ size | attachFile:'size' }}
-  // 2. API URL oluştur: {{ url | attachFile:'url' }}
   transform(
     value: number | string | null | undefined, 
     type: 'size' | 'url' = 'size',
@@ -24,7 +21,6 @@ export class AttachFilePipe implements PipeTransform {
     return this.transformSize(value as number, decimals);
   }
 
-  // Dosya boyutunu formatla (B, KB, MB, GB)
   private transformSize(bytes: number | null | undefined, decimals: number): string {
     if (!bytes || bytes === 0) return '0 B';
     
@@ -37,7 +33,6 @@ export class AttachFilePipe implements PipeTransform {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
-  // API URL'i oluştur
   private transformUrl(url: string | null | undefined): string {
     if (!url) return '';
     if (url.startsWith('http')) return url;

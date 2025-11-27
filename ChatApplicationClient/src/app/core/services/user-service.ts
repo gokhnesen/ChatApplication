@@ -12,9 +12,7 @@ import { User } from '../shared/models/user';
 export class UserService {
   private apiUrl = environment.apiUrl;
   currentUser = signal<any>(null);
-  
-  // ✅ Cache mekanizması
-  private userInfoCache$?: Observable<User>;
+    private userInfoCache$?: Observable<User>;
 
   constructor(
     private httpClient: HttpClient,
@@ -42,7 +40,7 @@ export class UserService {
   login(payload: { email?: string; userName?: string; password: string }) {
     const url = `${this.apiUrl}/login?useCookies=true&useSessionCookies=true`;
     return this.httpClient.post<any>(url, payload, { withCredentials: true }).pipe(
-      switchMap(() => this.getUserInfo(true)), // ✅ Force refresh
+      switchMap(() => this.getUserInfo(true)), 
       tap(() => localStorage.setItem('isAuthenticated', 'true')),
       catchError(err => {
         localStorage.removeItem('isAuthenticated');
@@ -90,7 +88,7 @@ export class UserService {
 
   logout() {
     this.currentUser.set(null);
-    this.userInfoCache$ = undefined; // ✅ Cache'i temizle
+    this.userInfoCache$ = undefined; 
     
     if (typeof window !== 'undefined') {
       localStorage.removeItem('currentUser');
@@ -100,18 +98,15 @@ export class UserService {
     
     return this.httpClient.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).pipe(
       catchError(error => {
-        console.error('Logout error:', error);
         return of(null);
       })
     );
   }
 
-// UserService içindeki mevcut uploadProfilePhoto metodunu bununla değiştirin
 uploadProfilePhoto(file: File, userId?: string): Observable<any> {
     const formData = new FormData();
     formData.append('photo', file); 
     
-    // Güvenlik için: ID'yi sunucuya göndermeniz gerekiyorsa kalsın
     if (userId) {
         formData.append('userId', userId);
     }
@@ -131,10 +126,9 @@ uploadProfilePhoto(file: File, userId?: string): Observable<any> {
                                 profilePhotoUrl: newUrl 
                             };
                         }
-                        return user; // Kullanıcı yoksa değişiklik yapma
+                        return user; 
                     });
                     
-                    // Cache'i temizle, sonraki istek yeni veriyi çeksin
                     this.userInfoCache$ = undefined; 
                 }
             })
@@ -150,7 +144,7 @@ uploadProfilePhoto(file: File, userId?: string): Observable<any> {
       .pipe(
         tap(res => {
           if (res?.isSuccess !== false) {
-            this.getUserInfo(true).subscribe(); // ✅ Force refresh
+            this.getUserInfo(true).subscribe(); 
           }
         })
       );

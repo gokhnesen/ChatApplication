@@ -9,15 +9,13 @@ import { UserService } from '../../../services/user-service';
   selector: 'app-login',
   standalone: true,
   imports: [
-    ReactiveFormsModule, // DEĞİŞTİ
+    ReactiveFormsModule, 
     CommonModule
   ],
   templateUrl: './login.html',
   styleUrls: ['./login.scss']
 })
 export class Login implements OnInit {
-  // Kaldırıldı: email, password, emailError, passwordError, emailTouched, passwordTouched, attemptedLogin
-
   error: string = '';
   isLoading: boolean = false;
   showPassword: boolean = false;
@@ -26,19 +24,16 @@ export class Login implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  // 1. FormGroup tanımı
   loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
   });
   
-  // Form kontrollerine erişim için getter
   get f() {
     return this.loginForm.controls;
   }
 
   ngOnInit(): void {
-    // 2. RxJS take(1) ile abonelik tek seferlik hale getirildi
     this.route.queryParams.pipe(take(1)).subscribe(params => {
       if (params['externalAuth'] === 'true') {
         this.isLoading = true;
@@ -62,10 +57,7 @@ export class Login implements OnInit {
     });
   }
 
-  // Kaldırıldı: validateEmailFormat, canSubmit
-
   login() {
-    // 3. MarkAllAsTouched ile tüm alanların hata mesajlarını gösteriyoruz
     this.loginForm.markAllAsTouched();
 
     if (this.loginForm.invalid) {
@@ -76,7 +68,6 @@ export class Login implements OnInit {
     this.isLoading = true;
     this.error = '';
     
-    // Form değerlerini alın
     const { email, password } = this.loginForm.value;
 
     this.userService.login({ 

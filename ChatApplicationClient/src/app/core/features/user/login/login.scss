@@ -1,25 +1,21 @@
-/* login.scss - WhatsApp Dark Theme & Social Login Integrated */
-
 .login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0b141a; // ✅ WhatsApp dark background
+  background: #0b141a; 
   padding: 20px;
   position: relative;
   overflow: hidden;
 
-  /* allow vertical touch scrolling, prevent horizontal */
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* smooth touch scrolling on iOS */
-  touch-action: pan-y; /* only allow vertical pan */
-  overscroll-behavior: contain; /* prevent parent/page from scrolling when reaching edges */
+  -webkit-overflow-scrolling: touch; 
+  touch-action: pan-y; 
+  overscroll-behavior: contain; 
 
-  /* hide scrollbar (Chrome, Safari, Edge, Firefox, IE) */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
 }
 .login-container::-webkit-scrollbar {
   display: none;
@@ -27,7 +23,6 @@
   height: 0;
 }
 
-/* ✅ YENİ: Google'dan dönüldüğünde çıkan Loading Ekranı */
 .external-loading {
   display: flex;
   flex-direction: column;
@@ -39,7 +34,7 @@
   
   i {
     font-size: 50px;
-    color: #00a884; // WhatsApp yeşili
+    color: #00a884; 
   }
   
   h3 {
@@ -119,7 +114,6 @@
   flex-direction: column;
   gap: 20px;
 
-  // ✅ DÜZELTİLDİ: Divider (Ayırıcı Çizgi)
   .divider {
     display: flex;
     align-items: center;
@@ -132,7 +126,7 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: #2a3942; // WhatsApp border rengiyle uyumlu
+      background: #2a3942; 
     }
 
     span {
@@ -141,7 +135,6 @@
     }
   }
 
-  // ✅ ENTEGRE EDİLDİ: Social Login Butonları
   .social-login {
     display: flex;
     flex-direction: column;
@@ -154,7 +147,7 @@
       gap: 12px;
       width: 100%;
       padding: 14px;
-      border-radius: 12px; // Diğer inputlarla aynı radius
+      border-radius: 12px; 
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
@@ -166,7 +159,6 @@
         font-size: 1.2rem;
       }
 
-      // Google Butonu
       &.google {
         background-color: #db4437;
         box-shadow: 0 4px 12px rgba(219, 68, 55, 0.2);
@@ -177,14 +169,13 @@
         }
       }
 
-      // Microsoft Butonu
       &.microsoft {
-        background-color: #111b21; // Çok koyu arka plan
-        border: 1px solid #2a3942; // WhatsApp border rengi
+        background-color: #111b21; 
+        border: 1px solid #2a3942; 
         
         &:hover { 
           background-color: #000; 
-          border-color: #00a884; // Hover olunca yeşil border
+          border-color: #00a884; 
           transform: translateY(-2px);
         }
       }
@@ -436,7 +427,6 @@
   50% { transform: translateY(-20px) scale(1.05); }
 }
 
-// Responsive
 @media (max-width: 768px) {
   .login-container { padding: 16px; }
   .login-card { padding: 32px 24px; max-width: 100%; }

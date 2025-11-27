@@ -16,7 +16,7 @@ namespace ChatApplication.Application.Middleware
         private static readonly ConcurrentDictionary<string, FixedWindowRateLimiter> _limiters = new();
 
         // Configure limits here
-        private const int PermitLimit = 60;
+        private const int PermitLimit = 600;
         private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
 
         public RateLimitMiddleware(RequestDelegate next, ILogger<RateLimitMiddleware> logger)

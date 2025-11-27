@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user-service';
 import { FriendService } from '../../services/friend-service';
 import { ProfilePhotoPipe } from '../../pipes/profile-photo.pipe';
-import { NotificationService } from '../../services/notification-service'; // EKLE
+import { NotificationService } from '../../services/notification-service'; 
 import { AbstractControl } from '@angular/forms';
 import { CustomValidators } from '../../shared/validators/custom-validators';
 import { Router } from '@angular/router';
@@ -20,7 +20,7 @@ import { finalize, tap } from 'rxjs';
 export class Settings implements OnInit {
   private userService = inject(UserService);
   private friendService = inject(FriendService);
-  private notificationService = inject(NotificationService); // EKLE
+  private notificationService = inject(NotificationService); 
   private router = inject(Router);
 
   currentUser: any = null;
@@ -94,8 +94,8 @@ export class Settings implements OnInit {
         this.isLoadingBlocked = false;
       },
       error: (error) => {
-        console.error('Engellenenler yüklenemedi:', error);
         this.isLoadingBlocked = false;
+        this.notificationService.show('Engellenen kullanıcılar yüklenirken bir hata oluştu.', 'error');
       }
     });
   }
@@ -123,8 +123,8 @@ export class Settings implements OnInit {
         this.isLoadingFriends = false;
       },
       error: (error) => {
-        console.error('Arkadaş listesi yüklenemedi:', error);
         this.isLoadingFriends = false;
+        this.notificationService.show('Arkadaş listesi yüklenirken bir hata oluştu.', 'error');
       }
     });
   }
@@ -160,12 +160,11 @@ export class Settings implements OnInit {
                   this.closeAddBlockModal();
                 }
               } else {
-                this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+                this.notificationService.show('Kullanıcı engellenemedi, lütfen tekrar deneyin.', 'error');
               }
             },
             error: (error) => {
-              console.error('Engelleme hatası:', error);
-              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+              this.notificationService.show('Kullanıcı engellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
             }
           });
         }
@@ -239,12 +238,11 @@ export class Settings implements OnInit {
           this.notificationService.show(response?.message ?? 'Profil güncellendi!', 'success');
 
         } else {
-          this.notificationService.show(response?.message || 'Profil güncellenemedi.', 'error');
+          this.notificationService.show('Profiliniz güncellenirken bir sorun oluştu. Lütfen tekrar deneyin.', 'error');
         }
       },
       error: (error) => {
-        console.error('Profil güncelleme hatası:', error);
-        this.notificationService.show('Bir hata oluştu.', 'error');
+        this.notificationService.show('Profiliniz güncellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
       }
     });
   }
@@ -277,12 +275,11 @@ export class Settings implements OnInit {
           
           this.loadUserInfo(); 
         } else {
-          this.notificationService.show(response.message || 'Yükleme başarısız.', 'error');
+          this.notificationService.show('Fotoğraf yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.', 'error');
         }
       },
       error: (error) => {
-        console.error('Fotoğraf yükleme hatası:', error);
-        this.notificationService.show('Fotoğraf yüklenirken bir hata oluştu.', 'error');
+        this.notificationService.show('Fotoğraf yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
       }
     });
   }
@@ -299,12 +296,11 @@ export class Settings implements OnInit {
                 this.blockedUsers = this.blockedUsers.filter(u => u.id !== user.id);
                 this.notificationService.show('Engel kaldırıldı!', 'success');
               } else {
-                this.notificationService.show(response.message || 'Engel kaldırılamadı.', 'error');
+                this.notificationService.show('Kullanıcının engeli kaldırılamadı, lütfen tekrar deneyin.', 'error');
               }
             },
             error: (error) => {
-              console.error('Engel kaldırma hatası:', error);
-              this.notificationService.show('Bir hata oluştu.', 'error');
+              this.notificationService.show('Kullanıcının engeli kaldırılırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
             }
           });
         }
@@ -414,9 +410,7 @@ export class Settings implements OnInit {
         this.closeChangePasswordModal();
       },
       error: (err) => {
-        const msg = err?.error?.title || err?.error?.message || 'Şifre değiştirilirken hata oluştu mevcut şifrenizi kontrol edin.';
-        this.notificationService.show(msg, 'error');
-        console.error('changePassword error', err);
+        this.notificationService.show('Şifre değiştirilirken bir hata oluştu. Lütfen mevcut şifrenizi kontrol edin.', 'error');
       }
     });
   }
@@ -439,7 +433,6 @@ export class Settings implements OnInit {
                 this.notificationService.show(res?.message ?? 'Hesabınız silindi.', 'success');
                 this.userService.logout().subscribe({
                   next: () => {
-                    // 
                     this.router.navigate(['/login']).catch(() => { window.location.href = '/'; });
                   },
                   error: () => {
@@ -447,13 +440,11 @@ export class Settings implements OnInit {
                   }
                 });
               } else {
-                this.notificationService.show(res?.message || 'Hesap silinemedi.', 'error');
+                this.notificationService.show('Hesabınız silinirken bir sorun oluştu. Lütfen tekrar deneyin.', 'error');
               }
             },
             error: (err) => {
-              console.error('deleteAccount error', err);
-              const msg = err?.error?.message || 'Hesap silme sırasında hata oluştu.';
-              this.notificationService.show(msg, 'error');
+              this.notificationService.show('Hesap silinirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
             }
           });
         }

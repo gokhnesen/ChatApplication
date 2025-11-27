@@ -1,30 +1,20 @@
-// src/app/shared/validators/custom-validators.ts
 import { AbstractControl, ValidationErrors, ValidatorFn, FormGroup } from '@angular/forms';
 
 export class CustomValidators {
 
-  /**
-   * Metin alanının boş olup olmadığını veya sadece boşluklardan oluşup oluşmadığını kontrol eder.
-   * Eğer metin sadece boşluklardan oluşuyorsa veya tamamen boşsa geçersizdir.
-   */
   static notWhitespace(control: AbstractControl): ValidationErrors | null {
     if (typeof control.value !== 'string' && control.value !== null && control.value !== undefined) {
-        return null; // String olmayan değerler için bu validasyonu uygulamıyoruz
+        return null; 
     }
     const isWhitespace = (control.value || '').trim().length === 0;
     const isValid = !isWhitespace;
     return isValid ? null : { 'notWhitespace': true };
   }
 
-  /**
-   * Email formatının geçerli olup olmadığını kontrol eder.
-   * Daha güçlü bir regex kullanır.
-   */
   static emailFormat(control: AbstractControl): ValidationErrors | null {
     if (!control.value) {
       return null;
     }
-    // RFC 5322 standardına yakın, daha kapsamlı bir email regex'i
     const emailRegex = new RegExp(
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
     );
@@ -32,9 +22,6 @@ export class CustomValidators {
     return isValid ? null : { 'emailFormat': true };
   }
 
-  /**
-   * Minimum uzunluk kontrolü yapar.
-   */
   static minLength(minLength: number): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       if (!control.value) {
@@ -45,9 +32,6 @@ export class CustomValidators {
     };
   }
 
-  /**
-   * Maksimum uzunluk kontrolü yapar.
-   */
   static maxLength(maxLength: number): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       if (!control.value) {
@@ -58,10 +42,6 @@ export class CustomValidators {
     };
   }
 
-  /**
-   * Parolanın belirli kriterleri (en az 1 büyük harf, 1 küçük harf, 1 sayı, 1 özel karakter ve minimum uzunluk) karşılayıp karşılamadığını kontrol eder.
-   * Not: Minimum uzunluk burada da kontrol ediliyor, Validators.minLength ile çakışmaması için dikkatli kullanılmalı.
-   */
   static passwordStrength(minLength: number = 8): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       if (!control.value) {
@@ -89,27 +69,19 @@ export class CustomValidators {
     };
   }
 
-
-  /**
-   * İki alanın değerlerinin eşleşip eşleşmediğini kontrol eder.
-   * Genellikle parola ve parola tekrarı gibi alanlar için kullanılır.
-   * Bu validatör genellikle FormGroup'a atanır.
-   */
   static matchFields(controlName1: string, controlName2: string): ValidatorFn {
     return (formGroup: AbstractControl): ValidationErrors | null => {
       const control1 = formGroup.get(controlName1);
       const control2 = formGroup.get(controlName2);
 
       if (!control1 || !control2) {
-        return null; // Kontroller bulunamazsa validasyon yapma
+        return null; 
       }
 
-      // Eğer control2'de zaten bir hata varsa, onu koru ve sadece eşleşme hatasını ekle
       if (control1.value !== control2.value) {
         control2.setErrors({ ...control2.errors, 'matchFields': true });
         return { 'matchFields': true };
       } else {
-        // Eğer eşleşiyorsa ve matchFields hatası varsa, onu kaldır
         if (control2.errors && control2.errors['matchFields']) {
           const errors = { ...control2.errors };
           delete errors['matchFields'];
@@ -120,10 +92,6 @@ export class CustomValidators {
     };
   }
 
-  /**
-   * Dosya seçici için maksimum dosya boyutu validasyonu.
-   * @param maxSizeInBytes Maksimum dosya boyutu (byte cinsinden)
-   */
   static maxFileSize(maxSizeInBytes: number): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       if (!control.value) {
@@ -137,10 +105,6 @@ export class CustomValidators {
     };
   }
 
-  /**
-   * Dosya seçici için izin verilen dosya tipleri validasyonu.
-   * @param allowedTypes İzin verilen MIME tipleri dizisi (örn: ['image/jpeg', 'image/png'])
-   */
   static allowedFileTypes(allowedTypes: string[]): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       if (!control.value) {

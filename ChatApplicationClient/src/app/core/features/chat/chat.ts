@@ -119,6 +119,59 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       this.friendsList = friends;
     });
 
+    this.subscriptions.push(
+      this.messageBroadcast.messageUpdate$.subscribe((update: any) => {
+        if (!update) return;
+
+        const curId = this.currentUser?.id;
+        if (curId) {
+          const targetUserId = update.targetUserId || update.receiverId || null;
+          const senderId = update.senderId || null;
+          if (targetUserId && targetUserId !== curId && senderId !== curId) {
+            return;
+          }
+        } else {
+          return;
+        }
+        // --- /yeni filtre ---
+
+        // Eğer update üzerinde conversationId varsa kullan; yoksa friendId fallback
+        const activeConvId = (curId && this.receiverUser?.id) ? [curId, this.receiverUser.id].sort().join('|') : '';
+
+        const incomingConvId = update.conversationId || '';
+
+        if (incomingConvId) {
+          if (!activeConvId || incomingConvId !== activeConvId) {
+            return; // konuşma uyuşmuyorsa ignore et
+          }
+        } else {
+          // conversationId yoksa eski friendId mantığı ile kontrol et
+          let friendId = update.friendId || '';
+          if (!friendId && update.senderId && update.receiverId && curId) {
+            friendId = (update.senderId === curId ? update.receiverId : update.senderId);
+          }
+          if (!friendId || friendId !== this.receiverUser.id) return;
+        }
+
+        // Minimal mesaj oluşturma ve ekleme (var olan mesaj yapısına uyarla)
+        const newMsg: Message = {
+          id: update.messageId || update.id || Date.now().toString(),
+          senderId: update.senderId || '',
+          receiverId: update.receiverId || this.currentUser.id,
+          content: update.content || '',
+          sentAt: update.sentAt ? new Date(update.sentAt) : new Date(),
+          isRead: !!update.isRead,
+          type: update.type || MessageType.Text,
+          attachmentUrl: update.attachmentUrl,
+          attachmentName: update.attachmentName,
+          attachmentSize: update.attachmentSize
+        };
+
+        this.messages.push(newMsg);
+        this.shouldScrollToBottom = true;
+      })
+    );
+
     if (signalUser) {
       this.setCurrentUserFromSignal(signalUser);
       this.initializeChat();
@@ -180,22 +233,6 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   private loadFriendsList(): void {
     this.friendService.getMyFriends().subscribe({
       next: (friends) => {
-        if (!friends.some((f: any) => f.id === AI_USER.id)) {
-          const aiFriend = {
-            id: AI_USER.id,
-            name: AI_USER.name,
-            lastName: null,
-            profilePhotoUrl: AI_USER.profilePhotoUrl,
-            senderId: this.currentUser?.id ?? '',
-            receiverId: AI_USER.id,
-            status: 'Accepted',
-            requestDate: new Date().toISOString(),
-            isBlocked: false,
-            isFavorite: false
-          } as any;
-
-          friends.push(aiFriend);
-        }
         this.friendsList = friends;
         this.startPresenceTracking();
       },
@@ -321,72 +358,81 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  private initializeSignalR(): void {
-    if (!this.currentUser.id) {
-      return;
-    }
+  // helper to determine which friendId should be used when broadcasting a message
+  private getBroadcastFriendId(msg: { senderId: string; receiverId: string }): string {
+    if (!this.currentUser || !this.currentUser.id) return msg.senderId || msg.receiverId || '';
+    return msg.senderId === this.currentUser.id ? msg.receiverId : msg.senderId;
+  }
 
-    this.signalRService.startConnection(this.currentUser.id);
-    
-    this.signalRService.onReceiveMessage((
-      senderId: string, 
-      content: string,
-      type?: MessageType,
-      attachmentUrl?: string | null,
-      attachmentName?: string | null,
-      attachmentSize?: number | null
-    ) => {
-      if (senderId === this.receiverUser.id) {
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          senderId: senderId,
-          receiverId: this.currentUser.id,
-          content: content,
-          sentAt: new Date(),
-          isRead: false,
-          type: type || MessageType.Text,
-          attachmentUrl: attachmentUrl,
-          attachmentName: attachmentName,
-          attachmentSize: attachmentSize
-        };
-        this.messages.push(newMessage);
-        this.shouldScrollToBottom = true;
-      }
+ // chat.ts dosyası
+
+private initializeSignalR(): void {
+  if (!this.currentUser.id) {
+    return;
+  }
+
+  this.signalRService.startConnection(this.currentUser.id);
+  
+  this.signalRService.onReceiveMessage((senderId: string, content: string, type?: MessageType, attachmentUrl?: string | null, attachmentName?: string | null, attachmentSize?: number | null) => {
+      
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        senderId: senderId,
+        receiverId: this.currentUser.id,
+        content: content,
+        sentAt: new Date(),
+        isRead: false,
+        type: type || MessageType.Text,
+        attachmentUrl: attachmentUrl,
+        attachmentName: attachmentName,
+        attachmentSize: attachmentSize
+      };
+
+      
+      const convId = [senderId || '', this.currentUser.id || ''].sort().join('|');
+      const friendId = senderId || this.currentUser.id; // Mesajı gönderen arkadaşımızdır
+
       this.messageBroadcast.notifyNewMessage({
-        friendId: senderId,
+        friendId,
         content: content,
         senderId: senderId,
         receiverId: this.currentUser.id,
-        sentAt: new Date(),
+        sentAt: newMessage.sentAt,
         isOwn: false,
-        type: type || MessageType.Text,
-        attachmentUrl: attachmentUrl,
-        attachmentName: attachmentName
+        type: newMessage.type,
+        attachmentUrl: newMessage.attachmentUrl,
+        attachmentName: newMessage.attachmentName,
+        messageId: newMessage.id,
+        conversationId: convId, // Filtreleme için kritik
+        targetUserId: this.currentUser.id
       });
-    });
+  });
 
-    this.signalRService.onMessageSent((
-      receiverId: string, 
-      content: string,
-      type?: MessageType,
-      attachmentUrl?: string | null,
-      attachmentName?: string | null,
-      attachmentSize?: number | null
-    ) => {});
+  // Mesaj  (Backend'den tetiklenirse)
+  this.signalRService.onMessageSent((
+    receiverId: string, 
+    content: string,
+    type?: MessageType,
+    attachmentUrl?: string | null,
+    attachmentName?: string | null,
+    attachmentSize?: number | null
+  ) => {
+  
+  });
 
-    this.signalRService.onMessageRead((messageIds: string[]) => {
-      this.messages.forEach(m => {
-        if (messageIds.includes(m.id)) {
-          m.isRead = true;
-          m.readAt = new Date();
-        }
-      });
+  this.signalRService.onMessageRead((messageIds: string[]) => {
+    this.messages.forEach(m => {
+      if (messageIds.includes(m.id)) {
+        m.isRead = true;
+        m.readAt = new Date();
+      }
     });
+  });
 
-    this.signalRService.onUnreadCountUpdate((count: number) => {
-      this.unreadCount = count;
-    });
-  }
+  this.signalRService.onUnreadCountUpdate((count: number) => {
+    this.unreadCount = count;
+  });
+}
 
   private setCurrentUserFromSignal(user: any): void {
     this.currentUser = {
@@ -663,89 +709,112 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
   await this.sendTextMessage();
 }
 
-  async sendTextMessage() {
-    if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
+// chat.ts içindeki sendTextMessage fonksiyonu
 
-    if (this.receiverUser.id === AI_USER.id) {
-      const userMsg = this.messageText.trim();
-      this.messages.push({
-        id: Date.now().toString(),
-        senderId: this.currentUser.id,
-        receiverId: AI_USER.id,
-        content: userMsg,
+async sendTextMessage() {
+  if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
+
+  if (this.receiverUser.id === AI_USER.id) {
+    const userMsg = this.messageText.trim();
+    
+    this.messages.push({
+      id: Date.now().toString(),
+      senderId: this.currentUser.id,
+      receiverId: AI_USER.id,
+      content: userMsg,
+      sentAt: new Date(),
+      isRead: true,
+      type: MessageType.Text
+    });
+
+    this.messageText = '';
+    this.shouldScrollToBottom = true;
+
+    try {
+      const resp = await this.messageService.ask(this.currentUser.id, userMsg).toPromise();
+      const aiText = resp?.response || resp?.text || 'Yanıt alınamadı.';
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        senderId: AI_USER.id,
+        receiverId: this.currentUser.id,
+        content: aiText,
         sentAt: new Date(),
         isRead: true,
         type: MessageType.Text
+      };
+
+      const convId = [this.currentUser.id, AI_USER.id].sort().join('|');
+      
+      this.messageBroadcast.notifyNewMessage({
+        friendId: AI_USER.id,
+        content: aiMessage.content,
+        senderId: aiMessage.senderId,
+        receiverId: aiMessage.receiverId,
+        sentAt: aiMessage.sentAt,
+        isOwn: false,
+        type: aiMessage.type,
+        messageId: aiMessage.id,
+        conversationId: convId,
+        targetUserId: this.currentUser.id
       });
 
-      this.messageText = '';
-      this.shouldScrollToBottom = true;
-
-      try {
-        const resp = await this.messageService.ask(this.currentUser.id, userMsg).toPromise();
-        const aiText = resp?.response || resp?.text || 'Yanıt alınamadı.';
-
-        this.messages.push({
-          id: (Date.now() + 1).toString(),
-          senderId: AI_USER.id,
-          receiverId: this.currentUser.id,
-          content: aiText,
-          sentAt: new Date(),
-          isRead: true,
-          type: MessageType.Text
-        });
-
-        this.shouldScrollToBottom = true;
-      } catch (err: any) {
-        this.notificationService.show(err?.message || 'AI yanıtı alınamadı', 'error');
-      }
-      return;
+    } catch (err: any) {
+      this.notificationService.show('Yapay zekadan yanıt alınırken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
     }
-
-    const command: Message = {
-      senderId: this.currentUser.id,
-      receiverId: this.receiverUser.id,
-      content: this.messageText,
-      type: MessageType.Text,
-      id: '',
-      sentAt: new Date(),
-      isRead: false
-    };
-
-    try {
-      const result = await this.messageService.sendMessage(command).toPromise();
-      
-      if (result) {
-        const newMessage: Message = {
-          id: result.messageId || result.id || Date.now().toString(),
-          senderId: this.currentUser.id,
-          receiverId: this.receiverUser.id,
-          content: command.content,
-          sentAt: result.sentAt ? new Date(result.sentAt) : new Date(),
-          isRead: false,
-          type: MessageType.Text
-        };
-        
-        this.messages.push(newMessage);
-        this.messageText = '';
-        
-        this.shouldScrollToBottom = true;
-
-        this.messageBroadcast.notifyNewMessage({
-          friendId: this.receiverUser.id,
-          content: command.content,
-          senderId: this.currentUser.id,
-          receiverId: this.receiverUser.id,
-          sentAt: new Date(),
-          isOwn: true,
-          type: MessageType.Text
-        });
-      }
-    } catch (error: any) {
-      this.notificationService.show(error.message || 'Mesaj gönderilemedi!', 'error');
-    }
+    return;
   }
 
+  const command: Message = {
+    senderId: this.currentUser.id,
+    receiverId: this.receiverUser.id,
+    content: this.messageText,
+    type: MessageType.Text,
+    id: '',
+    sentAt: new Date(),
+    isRead: false
+  };
+
+  try {
+    const result = await this.messageService.sendMessage(command).toPromise();
+    
+    if (result) {
+      const newMessage: Message = {
+        id: result.messageId || result.id || Date.now().toString(),
+        senderId: this.currentUser.id,
+        receiverId: this.receiverUser.id,
+        content: command.content,
+        sentAt: result.sentAt ? new Date(result.sentAt) : new Date(),
+        isRead: false,
+        type: MessageType.Text
+      };
+      
+      this.messageText = '';
+      
+
+      
+      const friendId = this.getBroadcastFriendId(newMessage) || this.receiverUser.id;
+      const convId = [this.currentUser.id, this.receiverUser.id].sort().join('|');
+
+      this.messageBroadcast.notifyNewMessage({
+        friendId,
+        messageId: newMessage.id,
+        content: command.content,
+        senderId: this.currentUser.id,
+        receiverId: this.receiverUser.id,
+        sentAt: new Date(),
+        isOwn: true,
+        type: MessageType.Text,
+        attachmentUrl: newMessage.attachmentUrl,
+        attachmentName: newMessage.attachmentName,
+        conversationId: convId,
+        targetUserId: this.currentUser.id
+      });
+    }
+  } catch (error: any) {
+    this.notificationService.show('Mesajınız gönderilirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+  }
+}
   async sendMessageWithFile() {
     if (!this.selectedFile || !this.receiverUser.id || !this.currentUser.id) return;
 
@@ -754,7 +823,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       const uploadResult = await this.messageService.uploadFile(this.selectedFile).toPromise();
       
       if (!uploadResult || !uploadResult.isSuccess) {
-        throw new Error(uploadResult?.message || 'Dosya yüklenemedi');
+        throw new Error('Dosya yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.');
       }
 
       const messageCommand = {
@@ -789,8 +858,11 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         this.selectedFilePreview = null;
         this.shouldScrollToBottom = true;
         
+        const friendId = this.getBroadcastFriendId(newMessage) || this.receiverUser.id;
+        const convId = [this.currentUser.id, this.receiverUser.id].sort().join('|');
         this.messageBroadcast.notifyNewMessage({
-          friendId: this.receiverUser.id,
+          friendId,
+          messageId: newMessage.id,
           content: messageCommand.content,
           senderId: this.currentUser.id,
           receiverId: this.receiverUser.id,
@@ -798,11 +870,14 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
           isOwn: true,
           type: messageCommand.type,
           attachmentUrl: messageCommand.attachmentUrl,
-          attachmentName: messageCommand.attachmentName
+          attachmentName: messageCommand.attachmentName,
+          attachmentSize: messageCommand.attachmentSize,
+          conversationId: convId,
+          targetUserId: this.currentUser.id
         });
       }
     } catch (error: any) {
-      this.notificationService.show(error.message || 'Dosya gönderilemedi!', 'error');
+      this.notificationService.show('Dosyanız gönderilirken bir sorun oluştu. Lütfen tekrar deneyin.', 'error');
     } finally {
       this.isUploading = false;
     }
@@ -840,20 +915,20 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       : this.receiverUser.name;
   }
 
-  openImagePreview(url: string | null | undefined) {
+  openImagePreview(url: string | null | undefined): void {
     if (!url) return;
-
-    let finalUrl = url;
-
+  
+    let finalUrl = url;    
+  
     if (url.startsWith('/uploads') || url.startsWith('uploads')) {
-      const base = environment.apiUrl?.replace(/\/$/, '') || '';
+      const base = (environment.apiUrl || '').replace(/\/api$/, '').replace(/\/$/, '');
       finalUrl = url.startsWith('/') ? base + url : base + '/' + url;
     } else if (!/^https?:\/\//i.test(url)) {
-      const base = environment.apiUrl?.replace(/\/$/, '') || '';
+      const base = (environment.apiUrl || '').replace(/\/api$/, '').replace(/\/$/, '');
       finalUrl = base + '/' + url.replace(/^\//, '');
     }
-
-    window.open(finalUrl, '_blank', 'noopener');
+  
+    this.imagePreviewUrl = finalUrl;
   }
 
   async openCamera() {
@@ -945,7 +1020,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
               window.location.reload();
             },
             error: () => {
-              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+              this.notificationService.show('Arkadaşınız silinirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
             }
           });
         }
@@ -974,11 +1049,11 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
                   }
                 });
               } else {
-                this.notificationService.show(response.message || 'Kullanıcı engellenemedi.', 'error');
+                this.notificationService.show('Kullanıcı engellenemedi, lütfen tekrar deneyin.', 'error');
               }
             },
             error: () => {
-              this.notificationService.show('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+              this.notificationService.show('Kullanıcı engellenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
             }
           });
         }

@@ -29,18 +29,14 @@ export class ChatSignalrService {
     this.hubConnection
       .start()
       .then(() => {
-        console.log('[SignalR] connected to hub');
       })
       .catch((err) => {
-        console.error('[SignalR] connection error', err);
       });
  
     this.hubConnection.on('PresenceUpdated', (payload: { userId: string; isOnline: boolean; lastSeen?: string }) => {
       try {
-        console.log('[SignalR] PresenceUpdated', payload);
         this.presenceSubject.next({ userId: payload.userId, isOnline: !!payload.isOnline, lastSeen: payload.lastSeen ?? null });
       } catch (e) {
-        console.error('[SignalR] PresenceUpdated handler error', e);
       }
     });
   }
@@ -57,10 +53,8 @@ export class ChatSignalrService {
     for (const id of userIds) {
       try {
         const online = await this.isUserOnline(id);
-        console.log('[SignalR] refreshPresence', { userId: id, isOnline: online });
         this.presenceSubject.next({ userId: id, isOnline: online, lastSeen: online ? null : null });
       } catch {
-        console.warn('[SignalR] refreshPresence failed for', id);
         this.presenceSubject.next({ userId: id, isOnline: false, lastSeen: null });
       }
     }

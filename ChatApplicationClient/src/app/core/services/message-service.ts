@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { Message, MessageUpdate, MessageType } from '../shared/models/message';
 import { environment } from '../../../environments/environment';
+import { UserService } from './user-service';
 
 
 
@@ -12,11 +13,40 @@ import { environment } from '../../../environments/environment';
 export class MessageService {
   private apiUrl = environment.apiUrl;
   private httpClient = inject(HttpClient);
+  private userService = inject(UserService);
   private messageUpdateSubject = new Subject<MessageUpdate>();
 
   messageUpdate$ = this.messageUpdateSubject.asObservable();
 
   notifyNewMessage(update: MessageUpdate): void {
+    const cur = this.userService.currentUser();
+    const curId = cur?.id;
+
+    let computedFriendId = update.friendId || '';
+
+    if (!computedFriendId || computedFriendId === '' || (curId && computedFriendId === curId)) {
+      if (update.senderId && update.receiverId && curId) {
+        computedFriendId = (update.senderId === curId ? update.receiverId : update.senderId) || '';
+      } else {
+        computedFriendId = update.senderId || update.receiverId || '';
+      }
+    }
+
+    const s = update.senderId || '';
+    const r = update.receiverId || '';
+    let conversationId = '';
+    if (s && r) {
+      const pair = [s, r].sort();
+      conversationId = pair.join('|');
+    } else if (computedFriendId && curId) {
+      const pair = [curId, computedFriendId].sort();
+      conversationId = pair.join('|');
+    }
+
+    update.friendId = computedFriendId;
+    (update as any).targetUserId = update.receiverId || null;
+    (update as any).conversationId = conversationId;
+
     this.messageUpdateSubject.next(update);
   }
 
@@ -50,14 +80,12 @@ export class MessageService {
     return this.httpClient.post<any>(`${this.apiUrl}/message/upload-attachment`, formData);
   }
 
-  // ✅ Dosya tipini belirle
   getFileType(file: File): MessageType {
     if (file.type.startsWith('image/')) return MessageType.Image;
     if (file.type.startsWith('video/')) return MessageType.Video;
     return MessageType.File;
   }
 
-  // ✅ Dosya önizlemesi oluştur
   createFilePreview(file: File): Observable<string> {
     return new Observable(observer => {
       const reader = new FileReader();
@@ -75,7 +103,6 @@ export class MessageService {
     });
   }
 
-  // ✅ Dosya boyutu doğrula
   validateFileSize(file: File, maxSizeMB: number = 10): { valid: boolean; error?: string } {
     const maxSize = maxSizeMB * 1024 * 1024;
     
@@ -89,7 +116,6 @@ export class MessageService {
     return { valid: true };
   }
 
-  // ✅ Kameradan fotoğraf çek
   capturePhotoFromCamera(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement): Promise<File> {
     return new Promise((resolve, reject) => {
       const context = canvasElement.getContext('2d');
@@ -113,27 +139,23 @@ export class MessageService {
     });
   }
 
-  // ✅ Video kaydı oluştur
   createVideoFromBlob(chunks: Blob[]): File {
     const blob = new Blob(chunks, { type: 'video/webm' });
     return new File([blob], `video-${Date.now()}.webm`, { type: 'video/webm' });
   }
 
-  // ✅ Medya yükle ve mesaj gönder
   async uploadAndSendMedia(
     file: File,
     senderId: string,
     receiverId: string,
     caption?: string
   ): Promise<any> {
-    // Dosyayı yükle
     const uploadResult = await this.uploadFile(file).toPromise();
     
     if (!uploadResult || !uploadResult.isSuccess) {
       throw new Error(uploadResult?.message || 'Dosya yüklenemedi');
     }
 
-    // Mesaj komutunu hazırla
     const messageCommand = {
       senderId,
       receiverId,
@@ -144,7 +166,6 @@ export class MessageService {
       attachmentSize: uploadResult.attachmentSize
     };
 
-    // Mesajı gönder
     return await this.sendMessage(messageCommand).toPromise();
   }
 

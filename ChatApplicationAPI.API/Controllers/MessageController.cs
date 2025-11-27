@@ -195,8 +195,7 @@ namespace ChatApplicationAPI.API.Controllers
                 command.UserId = userId;
                 var response = await Mediator.Send(command);
 
-                // Eğer AI servisinden gelen cevapta hata mesajı varsa (önceki kodda ayarlamıştık)
-                // Bunu kontrol edebilirsin veya direkt response'u dönersin.
+ 
                 return Ok(response);
             }
             catch (Exception ex)

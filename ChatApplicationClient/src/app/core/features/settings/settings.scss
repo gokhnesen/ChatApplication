@@ -1,5 +1,5 @@
 :root {
-  --primary: #2563eb; /* theme primary (mavi) */
+  --primary: #2563eb; 
   --bg: #f7f9fb;
   --card-bg: #ffffff;
   --text: #0f172a;
@@ -73,7 +73,6 @@
     }
   }
 
-  // Profil Bilgileri
   .profile-info {
     display: flex;
     gap: 2rem;
@@ -291,7 +290,7 @@
         }
 
         .danger-btn {
-          background: #ea4335; /* kırmızı */
+          background: #ea4335; 
           color: #fff;
           padding: 0.8rem 1.5rem;
           border: none;
@@ -408,7 +407,6 @@
     }
   }
 
-  // ✅ YENİ: Section header with add button
   .section-header {
     display: flex;
     align-items: center;
@@ -473,35 +471,24 @@
     }
   }
 
-  /* İki öğeyi yan yana gösteren satır için CSS */
 .row-with-two-items {
-    /* Flexbox'ı etkinleştirir */
     display: flex;
-    /* Öğeler arasındaki boşluğu eşit olarak dağıtır */
     justify-content: space-between;
-    /* Gerekirse dikey hizalama */
     align-items: flex-start;
-    /* Satır içi boşluk ekleyebilirsiniz */
     margin-bottom: 15px; 
 }
 
-/* Her bir detay grubunu (Ad Soyad ve Şifre) stilize etme */
 .detail-group {
-    /* Her bir grubun yarım genişlikte olmasını sağlar (aradaki boşluk için bir miktar çıkarılabilir) */
     width: 48%; 
-    /* Metin ve label'lar için alt alta düzeni korur */
     display: flex;
     flex-direction: column;
 }
 
-/* Label'lar ve değerler arasındaki boşluğu ayarlama */
 .detail-group label {
-    font-weight: bold; /* Label'ları kalın yapabilirsiniz */
+    font-weight: bold; 
     margin-bottom: 4px;
 }
 
-/* Mevcut .detail-row stiliniz hala e-posta ve arkadaşlık kodu için geçerli olmalıdır. */
-  /* Hesap & Güvenlik - profesyonel kart */
   .security-card {
     margin-top: 1rem;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
@@ -545,7 +532,6 @@
     justify-content: flex-start;
   }
 
-  /* small adjustment for mobile */
   @media (max-width: 820px) {
     .password-row {
       flex-direction: row;
@@ -615,7 +601,6 @@
   }
 }
 
-// ✅ YENİ: Add Block Modal
 .add-block-modal {
   position: fixed;
   top: 0;
@@ -848,7 +833,6 @@
   }
 }
 
-/* Genel modal overlay (tüm modal tipleri için) */
 .add-block-modal,
 .change-password-modal {
   position: fixed;
@@ -861,7 +845,6 @@
   padding: 24px;
 }
 
-/* Modal card */
 .add-block-modal .modal-content,
 .change-password-modal .modal-content {
   width: 100%;
@@ -876,7 +859,6 @@
   outline: none;
 }
 
-/* Daha küçük modal'lar için (şifre) */
 .change-password-modal .modal-content {
   background: #202c33 !important;
   border: 1px solid #2a3942;
@@ -886,7 +868,6 @@
   overflow: hidden;
 }
 
-/* Başlık */
 .modal-header {
   display: flex;
   align-items: center;
@@ -902,7 +883,6 @@
   color: var(--text);
 }
 
-/* Kapat butonu */
 .close-modal-btn {
   background: transparent;
   border: none;
@@ -919,7 +899,6 @@
   color: var(--text);
 }
 
-/* İçerik */
 .modal-body {
   padding: 16px 20px;
   max-height: calc(100vh - 260px);
@@ -927,7 +906,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Form alanları */
 .form-group {
   margin-bottom: 12px;
 }
@@ -953,7 +931,6 @@
   box-shadow: 0 4px 18px rgba(37,99,235,0.12);
 }
 
-/* Override: change-password modal — dark theme / professional */
 .change-password-modal .modal-content {
   background: #202c33 !important;
   border: 1px solid #2a3942;
@@ -982,7 +959,6 @@
   color: #e9edef;
 }
 
-/* body area darker than card for depth */
 .change-password-modal .modal-body {
   padding: 18px;
   background: #111820;
@@ -990,7 +966,6 @@
   overflow: auto;
 }
 
-/* form inputs tuned for dark theme */
 .change-password-modal .form-input {
   width: 100%;
   padding: 10px 12px;
@@ -1011,13 +986,11 @@
   background: #0b1114;
 }
 
-/* hata / bilgi metinleri */
 .change-password-modal .field-error small {
   color: #ffb4b4;
   font-size: 0.88rem;
 }
 
-/* footer */
 .change-password-modal .modal-footer {
   padding: 12px 18px;
   border-top: 1px solid rgba(42,57,66,0.5);
@@ -1027,7 +1000,6 @@
   justify-content: flex-end;
 }
 
-/* butonlar */
 .change-password-modal .save-btn {
   background: #00a884;
   color: #071117;
@@ -1046,54 +1018,44 @@
   border-radius: 8px;
 }
 
-/* ==============================================
-   ŞİFRE GÖSTER/GİZLE ALANI DÜZELTMESİ (FIX)
-   ============================================== */
-
 .password-row {
-  position: relative; /* ÖNEMLİ: Kapsayıcı referans noktası */
+  position: relative; 
   width: 100%;
   display: block;
 
-  /* Input alanı ayarları */
   .form-input {
     width: 100%;
-    /* Sağ taraftan boşluk bırakıyoruz ki yazı ikona girmesin */
     padding-right: 45px !important; 
     box-sizing: border-box;
   }
 
-  /* Göz butonu (eye-btn) ayarları */
   .eye-btn {
-    position: absolute; /* Bağımsız hareket etmesini sağlar */
-    top: 50%;           /* Yukarıdan %50 aşağı it */
-    right: 12px;        /* Sağdan 12px içeride dur */
-    transform: translateY(-50%); /* Tam dikey ortalama yap */
+    position: absolute; 
+    top: 50%;           
+    right: 12px;        
+    transform: translateY(-50%); 
     
-    /* Butonun varsayılan stillerini temizle */
     background: transparent;
     border: none;
-    padding: 5px; /* Tıklama alanını biraz genişletir */
+    padding: 5px; 
     margin: 0;
     cursor: pointer;
-    z-index: 10; /* Inputun üzerinde durması için */
+    z-index: 10; 
     display: flex;
     align-items: center;
     justify-content: center;
     
-    /* Renk Ayarları (Senin temana uygun) */
     color: #9aa9b2; 
     transition: color 0.2s ease;
 
     &:hover {
-      color: #e9edef; /* Hover olunca beyazlaşsın */
+      color: #e9edef; 
     }
 
     &:focus {
       outline: none;
     }
 
-    /* SVG İkon boyutu */
     svg {
       width: 20px;
       height: 20px;
@@ -1101,14 +1063,12 @@
   }
 }
 
-/* responsive küçük ekran ayarı */
 @media (max-width: 520px) {
   .change-password-modal .modal-content { max-width: calc(100% - 32px); margin: 0 16px; }
   .change-password-modal .modal-body { padding: 14px; }
   .change-password-modal .modal-header, .change-password_modal .modal-footer { padding-left: 14px; padding-right: 14px; }
 }
 
-/* Small screens */
 @media (max-width: 520px) {
   .modal-header, .modal-body, .modal-footer {
     padding-left: 14px;
@@ -1121,7 +1081,6 @@
   }
 }
 
-/* Animations & utilities */
 @keyframes modalEnter {
   from { transform: translateY(6px) scale(.995); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
@@ -1130,7 +1089,6 @@
   from { transform: rotate(0deg); } to { transform: rotate(360deg); }
 }
 
-/* Accessibility: reduce motion */
 @media (prefers-reduced-motion: reduce) {
   .add-block-modal .modal-content,
   .change-password-modal .modal-content { animation: none; }

@@ -95,6 +95,7 @@ export class AddFriends implements OnInit, OnDestroy {
         error: () => {
           this.isLoading = false;
           this.users = [];
+          this.notificationService.show('Kullanıcılar aranırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
         }
       })
     );

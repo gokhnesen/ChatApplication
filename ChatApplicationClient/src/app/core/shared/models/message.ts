@@ -23,13 +23,18 @@ export enum MessageType {
 }
 
 export interface MessageUpdate {
+  messageId: string;
   friendId: string;
   content: string;
   senderId: string;
   receiverId: string;
   sentAt: Date;
   isOwn: boolean;
-  type?: MessageType; // ✅ EKLE
-  attachmentUrl?: string | null; // ✅ EKLE
-  attachmentName?: string | null; // ✅ EKLE
+  type?: MessageType; 
+  attachmentUrl?: string | null; 
+  attachmentName?: string | null; 
+  attachmentSize?: number | null; 
+  attachmentDuration?: number | null;
+  conversationId: string;
+  targetUserId: string;
 }

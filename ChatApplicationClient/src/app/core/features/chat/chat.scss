@@ -13,6 +13,27 @@
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
   padding: 0;
 }
+ 
+// ✅ GÜNCELLENECEK: Responsive tasarım için media query
+@media (max-width: 1024px) {
+  .chat-container {
+    width: 100%; // ✅ Küçük ekranlarda tam genişlik
+    position: relative; // ✅ Sabit pozisyondan çıkar
+    box-shadow: none; // ✅ Gölgeyi kaldır
+
+    // ✅ YENİ: Mobil cihazlarda başlangıçta sohbeti gizle
+    display: none;
+  }
+
+  // ✅ YENİ: Sohbet aktif olduğunda görünür yap
+  .mobile-chat-active .chat-container {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 200; // Arkadaş listesinin üzerinde kalmasını sağla
+  }
+}
 
 .chat-header {
   display: flex;
@@ -23,6 +44,29 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   z-index: 10; // ✅ Header'a z-index ekle
+
+  // ✅ YENİ: Mobil için Geri Butonu
+  .back-to-friends-btn {
+    display: none; // Varsayılan olarak gizli
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin-right: 0.75rem;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    @media (max-width: 1024px) {
+      display: flex; // Mobilde görünür yap
+      align-items: center;
+      justify-content: center;
+    }
+  }
 
   .header-avatar {
     width: 45px;
@@ -1304,11 +1348,50 @@
     }
   }
 
-
-/* mesaj altındaki küçük metin */
 .message-presence-text {
   margin-top: 6px;
   color: #9aa4a6;
   font-size: 11px;
   line-height: 1;
+}
+
+// ✅ GÜNCELLENECEK: Genel responsive iyileştirmeler
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 0.75rem 1rem;
+
+    .header-avatar {
+      width: 40px;
+      height: 40px;
+    }
+
+    .header-info h3 {
+      font-size: 1rem;
+    }
+  }
+
+  .messages {
+    padding: 12px;
+  }
+
+  .message-box {
+    max-width: 80%; // ✅ Mesaj kutusu genişliğini artır
+  }
+
+  .own-message {
+    max-width: 80%;
+  }
+
+  .chat-form {
+    padding: 8px 12px;
+  }
+
+  .message-image .chat-image,
+  .message-video .chat-video {
+    max-width: 250px; // ✅ Medya boyutunu küçült
+  }
+
+  .empty-chat h3 {
+    font-size: 20px;
+  }
 }

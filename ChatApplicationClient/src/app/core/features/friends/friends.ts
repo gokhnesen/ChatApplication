@@ -74,7 +74,6 @@ export class Friends implements OnInit, OnDestroy {
       this.notificationSound.preload = 'auto';
       this.notificationSound.volume = 0.5;
     } catch {
-      // silently ignore audio creation errors
     }
   }
 
@@ -160,7 +159,7 @@ export class Friends implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.requestsError = err?.error?.message || 'İstekler yüklenirken hata oluştu';
+        this.requestsError = 'Arkadaşlık istekleri yüklenirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.';
         this.requestsLoading = false;
         this.cdr.detectChanges();
       }
@@ -195,7 +194,7 @@ export class Friends implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.processingRequests.delete(fid);
-        this.notificationService.show(err?.error?.message || 'İstek işlenirken hata oluştu', 'error');
+        this.notificationService.show('İsteğe yanıt verilirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
         this.cdr.detectChanges();
       }
     });
@@ -382,14 +381,25 @@ export class Friends implements OnInit, OnDestroy {
   private initializeListeners(): void {
     this.subscriptions.push(
       this.messageBroadcast.messageUpdate$.subscribe((update) => {
+        
         this.ngZone.run(() => {
+          const friendId = update?.friendId || (update?.senderId === this.currentUserId ? update.receiverId : update.senderId);
+        
+          if (!friendId) {
+            return;
+          }
+          const target = this.friends.find(f => f.id === friendId);
+          if (!target) {
+            return;
+          }
+        
           this.handleNewMessage(
-            update.friendId,
+            friendId,
             update.content,
             update.senderId,
             update.receiverId,
-            update.sentAt,
-            update.isOwn,
+            update.sentAt ? new Date(update.sentAt) : new Date(),
+            !!update.isOwn,
             update.type || MessageType.Text,
             update.attachmentUrl,
             update.attachmentName
@@ -519,7 +529,6 @@ export class Friends implements OnInit, OnDestroy {
           }, 100);
         })
         .catch(() => {
-          // ignore playback errors
         });
     }
   }
