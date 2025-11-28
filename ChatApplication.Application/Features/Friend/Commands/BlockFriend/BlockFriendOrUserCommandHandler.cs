@@ -15,6 +15,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.BlockFriend
         private readonly IFriendReadRepository _friendReadRepository;
         private readonly IFriendWriteRepository _friendWriteRepository;
         private readonly ILogger<BlockFriendOrUserCommandHandler> _logger;
+        private const string AiUserId = "ai-bot";
 
         public BlockFriendOrUserCommandHandler(
             IFriendReadRepository friendReadRepository,
@@ -32,6 +33,17 @@ namespace ChatApplication.Application.Features.Friend.Commands.BlockFriend
             {
                 _logger.LogInformation("Kullanıcı engelleme işlemi: {BlockerId} -> {BlockedUserId}", request.BlockerId, request.BlockedUserId);
 
+                if (string.Equals(request.BlockedUserId, AiUserId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(request.BlockerId, AiUserId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("AI engelleme denemesi engellendi: {BlockerId} -> {BlockedUserId}", request.BlockerId, request.BlockedUserId);
+                    return new BlockFriendOrUserCommandResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Yapay zeka engellenemez."
+                    };
+                }
+
                 // Mevcut arkadaşlık kaydını kontrol et
                 var friendship = await _friendReadRepository.GetFriendRequestAsync(request.BlockerId, request.BlockedUserId);
 
@@ -47,7 +59,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.BlockFriend
                     else
                     {
                         // Karşı tarafın gönderdiği istek varsa, önce sil
-                         _friendWriteRepository.Remove(friendship);
+                        _friendWriteRepository.Remove(friendship);
                         await _friendWriteRepository.SaveAsync();
 
                         // Yeni engelleme kaydı oluştur
@@ -85,7 +97,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.BlockFriend
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Kullanıcı engellenirken hata oluştu");
-                return new BlockFriendOrUserCommandResponse 
+                return new BlockFriendOrUserCommandResponse
                 {
                     IsSuccess = false,
                     Message = "İşlem sırasında bir hata oluştu.",

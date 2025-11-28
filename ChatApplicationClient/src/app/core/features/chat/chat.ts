@@ -36,6 +36,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     profilePhotoUrl: 'assets/default-avatar.png' 
   };
   
+
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   
   messages: Message[] = [];
@@ -106,12 +107,24 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  isAiChat(): boolean {
+    return this.receiverUser?.id === AI_USER.id;
+  }
+
+
   constructor(
     private messageService: MessageService,
     private route: ActivatedRoute,
     private router: Router,
     private friendService: FriendService
-  ) {}
+  ) {
+    effect(() => {
+      const user = this.userService.currentUser();
+      if (user) {
+        this.setCurrentUserFromSignal(user);
+      }
+    });
+  }
 
   ngOnInit(): void {
     const signalUser = this.userService.currentUser();
@@ -133,9 +146,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         } else {
           return;
         }
-        // --- /yeni filtre ---
 
-        // Eğer update üzerinde conversationId varsa kullan; yoksa friendId fallback
         const activeConvId = (curId && this.receiverUser?.id) ? [curId, this.receiverUser.id].sort().join('|') : '';
 
         const incomingConvId = update.conversationId || '';
@@ -145,15 +156,12 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
             return; // konuşma uyuşmuyorsa ignore et
           }
         } else {
-          // conversationId yoksa eski friendId mantığı ile kontrol et
           let friendId = update.friendId || '';
           if (!friendId && update.senderId && update.receiverId && curId) {
             friendId = (update.senderId === curId ? update.receiverId : update.senderId);
           }
           if (!friendId || friendId !== this.receiverUser.id) return;
         }
-
-        // Minimal mesaj oluşturma ve ekleme (var olan mesaj yapısına uyarla)
         const newMsg: Message = {
           id: update.messageId || update.id || Date.now().toString(),
           senderId: update.senderId || '',
@@ -188,22 +196,14 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
         error: () => {}
       });
     }
-    
-    effect(() => {
-      const user = this.userService.currentUser();
-      if (user) {
-        this.setCurrentUserFromSignal(user);
-      }
-    });
 
     this.presenceSub = this.signalRService.presence$.subscribe(p => {
       if (!p || !p.userId) return;
       if (p.userId.startsWith('____')) return;
       this.presenceMap[p.userId] = !!p.isOnline;
       for (const m of this.messages) {
-        if (m.senderId === p.userId) {
-          // @ts-ignore
-          m.isOnline = !!p.isOnline;
+        if (m.senderId === p.userId) {          
+          (m as any).isOnline = !!p.isOnline;
         }
       }
     });
@@ -224,9 +224,7 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
 
     const m = this.messages.find(x => x.senderId === userId);
-    // @ts-ignore
-    if (m && typeof m.isOnline !== 'undefined') return !!m.isOnline;
-
+    if (m && typeof (m as any).isOnline !== 'undefined') return !!(m as any).isOnline;
     return false;
   }
 
@@ -265,9 +263,8 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
       }
 
       this.messages.forEach(m => {
-          if (m.senderId === payload.userId) {
-              // @ts-ignore
-              m.isOnline = isOnline; 
+          if (m.senderId === payload.userId) {              
+              (m as any).isOnline = isOnline; 
           }
       });
     });
@@ -358,13 +355,11 @@ export class Chat implements OnChanges, OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  // helper to determine which friendId should be used when broadcasting a message
   private getBroadcastFriendId(msg: { senderId: string; receiverId: string }): string {
     if (!this.currentUser || !this.currentUser.id) return msg.senderId || msg.receiverId || '';
     return msg.senderId === this.currentUser.id ? msg.receiverId : msg.senderId;
   }
 
- // chat.ts dosyası
 
 private initializeSignalR(): void {
   if (!this.currentUser.id) {
@@ -390,7 +385,7 @@ private initializeSignalR(): void {
 
       
       const convId = [senderId || '', this.currentUser.id || ''].sort().join('|');
-      const friendId = senderId || this.currentUser.id; // Mesajı gönderen arkadaşımızdır
+      const friendId = senderId || this.currentUser.id;
 
       this.messageBroadcast.notifyNewMessage({
         friendId,
@@ -403,12 +398,11 @@ private initializeSignalR(): void {
         attachmentUrl: newMessage.attachmentUrl,
         attachmentName: newMessage.attachmentName,
         messageId: newMessage.id,
-        conversationId: convId, // Filtreleme için kritik
+        conversationId: convId,
         targetUserId: this.currentUser.id
       });
   });
 
-  // Mesaj  (Backend'den tetiklenirse)
   this.signalRService.onMessageSent((
     receiverId: string, 
     content: string,
@@ -709,8 +703,6 @@ private initializeSignalR(): void {
   await this.sendTextMessage();
 }
 
-// chat.ts içindeki sendTextMessage fonksiyonu
-
 async sendTextMessage() {
   if (!this.messageText?.trim() || !this.receiverUser.id || !this.currentUser.id) return;
 
@@ -790,8 +782,6 @@ async sendTextMessage() {
       };
       
       this.messageText = '';
-      
-
       
       const friendId = this.getBroadcastFriendId(newMessage) || this.receiverUser.id;
       const convId = [this.currentUser.id, this.receiverUser.id].sort().join('|');
@@ -897,6 +887,9 @@ async sendTextMessage() {
   }
 
   toggleEmojiPicker() {
+    if (this.isAiChat()) {
+      return;
+    }
     this.showEmojiPicker = !this.showEmojiPicker;
   }
 
@@ -1004,6 +997,9 @@ async sendTextMessage() {
   }
 
   toggleUserMenu() {
+    if (this.isAiChat()) {
+      return; // Yapay zeka için menü açılmaz.
+    }
     this.showUserMenu = !this.showUserMenu;
   }
 
@@ -1013,6 +1009,11 @@ async sendTextMessage() {
       'confirm',
       {
         action: () => {
+          if (this.isAiChat()) {
+            this.notificationService.show('Yapay zeka sohbeti silinemez.', 'info');
+            return;
+          }
+
           this.friendService.removeFriend(this.receiverUser.id).subscribe({
             next: () => {
               this.showUserMenu = false;
@@ -1034,6 +1035,11 @@ async sendTextMessage() {
       'confirm',
       {
         action: () => {
+          if (this.isAiChat()) {
+            this.notificationService.show('Yapay zeka engellenemez.', 'info');
+            return;
+          }
+
           this.friendService.blockUser(this.currentUser.id, this.receiverUser.id).subscribe({
             next: (response) => {
               if (response.isSuccess) {

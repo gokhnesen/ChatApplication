@@ -1,8 +1,9 @@
 .sidebar {
-  width: 180px;
+  flex: 0 0 15%; // ✅ Geniş ekranlarda %15 genişlik kapla
+  max-width: 220px; // ✅ Çok geniş ekranlarda fazla büyümesini engelle
   background: #202c33;
   height: 100%;
-  display: flex;
+  display: flex;  
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
@@ -277,5 +278,12 @@
     &:active {
       transform: scale(0.98);
     }
+  }
+}
+
+// ✅ GÜNCELLENDİ: Responsive tasarım için media query (em birimiyle)
+@media (max-width: 64em) { // 1024px
+  .sidebar {
+    display: none; // ✅ Tablet ve mobil ekranlarda kenar çubuğunu gizle
   }
 }

@@ -6,17 +6,25 @@
   position: relative;
 }
 
-router-outlet + * {
-  flex: 1;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
 
-:host ::ng-deep router-outlet + * {
-  height: 100%;
-  display: flex;
-  flex: 1;
-  margin: 0;
-  padding: 0;
+:host ::ng-deep {
+  app-sidebar {
+    flex: 0 0 15%; 
+    max-width: 220px;
+  }
+
+  app-friends {   
+    flex: 0 0 30%; 
+  }
+
+  router-outlet + * {
+    flex: 1; 
+  }
+
+
+  @media (max-width: 64em) { 
+    app-sidebar {
+      display: none; 
+    }
+  }
 }

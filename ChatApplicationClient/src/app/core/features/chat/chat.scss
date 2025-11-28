@@ -1,37 +1,32 @@
 .chat-container {
-  width: 64%;
   height: 100vh;
-  margin-left: auto;
-  margin-right: 0;
   background: #0b141a;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  right: 0;
-  top: 0;
-  border-radius: 0;
-  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
   padding: 0;
 }
  
-// ✅ GÜNCELLENECEK: Responsive tasarım için media query
-@media (max-width: 1024px) {
-  .chat-container {
-    width: 100%; // ✅ Küçük ekranlarda tam genişlik
-    position: relative; // ✅ Sabit pozisyondan çıkar
-    box-shadow: none; // ✅ Gölgeyi kaldır
+@media (max-width: 64em) { 
 
-    // ✅ YENİ: Mobil cihazlarda başlangıçta sohbeti gizle
+  .chat-header .back-to-friends-btn {
     display: none;
   }
+}
 
-  // ✅ YENİ: Sohbet aktif olduğunda görünür yap
+@media (max-width: 48em) { // 768px (Mobil)
+  .chat-container {
+    flex-basis: 100%; // ✅ Mobilde tam genişlik
+    display: none; // ✅ Başlangıçta gizli
+  }
+
+  // ✅ Sohbet aktif olduğunda görünür yap
   .mobile-chat-active .chat-container {
     display: flex;
-    position: absolute;
-    top: 0;
-    left: 0;
     z-index: 200; // Arkadaş listesinin üzerinde kalmasını sağla
+  }
+
+  .chat-header .back-to-friends-btn {
+    display: flex; // ✅ Mobilde geri butonunu göster
   }
 }
 
@@ -47,13 +42,13 @@
 
   // ✅ YENİ: Mobil için Geri Butonu
   .back-to-friends-btn {
-    display: none; // Varsayılan olarak gizli
+    display: none;
     background: transparent;
     border: none;
     color: #fff;
     cursor: pointer;
     padding: 0.5rem;
-    margin-right: 0.75rem;
+    margin-right: 0.75rem; 
     border-radius: 50%;
     transition: background 0.2s ease;
 
@@ -61,11 +56,6 @@
       background: rgba(255, 255, 255, 0.1);
     }
 
-    @media (max-width: 1024px) {
-      display: flex; // Mobilde görünür yap
-      align-items: center;
-      justify-content: center;
-    }
   }
 
   .header-avatar {
@@ -1356,7 +1346,7 @@
 }
 
 // ✅ GÜNCELLENECEK: Genel responsive iyileştirmeler
-@media (max-width: 768px) {
+@media (max-width: 48em) { // 768px
   .chat-header {
     padding: 0.75rem 1rem;
 

@@ -9,7 +9,7 @@
       <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }} okunmamış</span>
     </div>
     
-    <div class="user-menu-wrapper">
+    <div class="user-menu-wrapper" *ngIf="!isAiChat()">
       <button class="user-menu-btn" (click)="toggleUserMenu()" type="button">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="1"></circle>
@@ -154,6 +154,7 @@
         type="button" 
         class="video-btn" 
         (click)="openVideoRecorder()"
+        *ngIf="!isAiChat()"
         [disabled]="isUploading || showCamera || showVideoRecorder"
         title="Video kaydet">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -166,6 +167,7 @@
         type="button" 
         class="camera-btn" 
         (click)="openCamera()"
+        *ngIf="!isAiChat()"
         [disabled]="isUploading || showCamera || showVideoRecorder"
         title="Fotoğraf çek">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -186,6 +188,7 @@
         type="button" 
         class="file-btn" 
         (click)="fileInput.click()"
+        *ngIf="!isAiChat()"
         [disabled]="isUploading || showCamera || showVideoRecorder"
         title="Dosya ekle">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -198,6 +201,7 @@
         type="button" 
         class="emoji-btn" 
         [class.active]="showEmojiPicker"
+        *ngIf="!isAiChat()"
         (click)="toggleEmojiPicker()"
         [disabled]="showCamera || showVideoRecorder">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

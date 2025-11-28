@@ -1,12 +1,9 @@
 .friends-container {
   height: 100vh;
-  width: 510px;
   background: #111b21;
   border-right: 1px solid #2a3942;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  z-index: 1; 
   margin-left: 0;
 
   .me-header {
@@ -612,6 +609,24 @@
           }
         }
       }
+    }
+  }
+
+  // ✅ GÜNCELLENDİ: Tablet ve mobil için ayrı responsive kurallar
+  @media (min-width: 769px) and (max-width: 1024px) {
+    // ✅ YENİ: Tablet görünümü (yarım ekran)
+    width: 100%; // ✅ Ekranın %40'ını kapla
+    z-index: 1;
+  }
+
+  @media (max-width: 768px) {
+    // ✅ GÜNCELLENDİ: Sadece mobil için geçerli
+    width: 100%; // ✅ Küçük ekranlarda tam genişlik
+    z-index: 100; // ✅ Sohbet görünümünün üzerinde kalmaması için
+
+    // ✅ Mobil cihazlarda sohbet aktifken arkadaş listesini gizle
+    .mobile-chat-active & {
+      display: none;
     }
   }
 }

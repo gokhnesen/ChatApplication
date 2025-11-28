@@ -14,6 +14,7 @@ namespace ChatApplication.Application.Features.Friend.Commands.RemoveFriend
         private readonly IFriendReadRepository _friendReadRepository;
         private readonly IFriendWriteRepository _friendWriteRepository;
         private readonly ILogger<RemoveFriendCommandHandler> _logger;
+        private const string AiUserId = "ai-bot";
 
         public RemoveFriendCommandHandler(
             IFriendReadRepository friendReadRepository,
@@ -31,6 +32,18 @@ namespace ChatApplication.Application.Features.Friend.Commands.RemoveFriend
             {
                 _logger.LogInformation("Arkadaşlık silme işlemi: {UserId} -> {FriendId}", request.UserId, request.FriendId);
 
+                // Server-side koruma: AI arkadaş silinemez
+                if (string.Equals(request.UserId, AiUserId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(request.FriendId, AiUserId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("AI arkadaş silme denemesi engellendi: {UserId} -> {FriendId}", request.UserId, request.FriendId);
+                    return new RemoveFriendCommandResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Yapay zeka sohbeti silinemez."
+                    };
+                }
+
                 var friendship = await _friendReadRepository.GetFriendRequestAsync(request.UserId, request.FriendId);
 
                 if (friendship == null)
@@ -43,7 +56,17 @@ namespace ChatApplication.Application.Features.Friend.Commands.RemoveFriend
                     };
                 }
 
-                // Arkadaşlık kaydını fiziksel olarak sil
+                if (string.Equals(friendship.SenderId, AiUserId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(friendship.ReceiverId, AiUserId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("AI arkadaş kaydı silinmeye çalışıldı ve engellendi: {FriendshipId}", friendship.Id);
+                    return new RemoveFriendCommandResponse
+                    {
+                        IsSuccess = false,
+                        Message = "Yapay zeka sohbeti silinemez."
+                    };
+                }
+
                 _friendWriteRepository.Remove(friendship);
                 await _friendWriteRepository.SaveAsync();
 
