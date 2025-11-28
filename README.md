@@ -5,6 +5,7 @@
 
 <img width="1911" height="930" alt="image" src="https://github.com/user-attachments/assets/acf2fd90-e360-4835-bcdb-b9533b3589d1" />
 
+![x](https://github.com/user-attachments/assets/7471708a-51d9-4baf-b920-a5cb5846dae3)
 
 Proje Hakkında
 
