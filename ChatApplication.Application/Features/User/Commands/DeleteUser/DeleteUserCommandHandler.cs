@@ -1,4 +1,5 @@
-﻿using ChatApplication.Application.Interfaces.Friend;
+﻿using ChatApplication.Application.Exceptions;
+using ChatApplication.Application.Interfaces.Friend;
 using ChatApplication.Application.Interfaces.Message;
 using ChatApplication.Domain.Entities;
 using MediatR;
@@ -7,13 +8,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace ChatApplication.Application.Features.User.Commands.DeleteUser
 {
     public class DeleteUserCommandHandler : IRequestHandler<DeleteUserCommand, DeleteUserCommandResponse>
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager; 
         private readonly IMessageReadRepository _messageReadRepository;
         private readonly IMessageWriteRepository _messageWriteRepository;
         private readonly IFriendReadRepository _friendReadRepository;
@@ -23,6 +24,7 @@ namespace ChatApplication.Application.Features.User.Commands.DeleteUser
 
         public DeleteUserCommandHandler(
             UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
             IMessageReadRepository messageReadRepository,
             IMessageWriteRepository messageWriteRepository,
             IFriendReadRepository friendReadRepository,
@@ -31,6 +33,7 @@ namespace ChatApplication.Application.Features.User.Commands.DeleteUser
             ILogger<DeleteUserCommandHandler> logger)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _messageReadRepository = messageReadRepository;
             _messageWriteRepository = messageWriteRepository;
             _friendReadRepository = friendReadRepository;
@@ -41,100 +44,76 @@ namespace ChatApplication.Application.Features.User.Commands.DeleteUser
 
         public async Task<DeleteUserCommandResponse> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
         {
-            try
+            if (request == null || string.IsNullOrEmpty(request.UserId))
             {
-                if (request == null || string.IsNullOrEmpty(request.UserId))
+                throw new ValidationException(new Dictionary<string, string[]>
                 {
-                    return new DeleteUserCommandResponse { IsSuccess = false, Message = "Geçersiz istek." };
-                }
-
-                // Ensure caller can only delete their own account
-                var callerId = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                               ?? _httpContextAccessor?.HttpContext?.User?.FindFirst("sub")?.Value;
-
-                if (string.IsNullOrEmpty(callerId))
-                {
-                    _logger.LogWarning("DeleteUser attempt without authenticated caller. RequestUserId: {RequestUserId}", request.UserId);
-                    return new DeleteUserCommandResponse { IsSuccess = false, Message = "Yetkilendirme bilgisi bulunamadı." };
-                }
-
-                if (!string.Equals(callerId, request.UserId, System.StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning("Unauthorized delete attempt. CallerId: {CallerId}, TargetUserId: {TargetId}", callerId, request.UserId);
-                    return new DeleteUserCommandResponse { IsSuccess = false, Message = "Bu işlemi gerçekleştirme yetkiniz yok." };
-                }
-
-                var user = await _userManager.FindByIdAsync(request.UserId);
-                if (user == null)
-                {
-                    return new DeleteUserCommandResponse { IsSuccess = false, Message = "Kullanıcı bulunamadı." };
-                }
-
-                // Note: password validation REMOVED — user may delete own account using only their UserId.
-
-                // 1) Use existing repository abstractions to delete dependents (messages, friend records)
-                var userId = user.Id;
-
-                // Delete messages where user is sender or receiver
-                var messagesToDelete = await _messageReadRepository
-                    .GetAll(tracking: true)
-                    .Where(m => m.SenderId == userId || m.ReceiverId == userId)
-                    .ToListAsync(cancellationToken);
-
-                if (messagesToDelete.Any())
-                {
-                    foreach (var msg in messagesToDelete)
-                    {
-                        _messageWriteRepository.Remove(msg);
-                    }
-
-                    await _messageWriteRepository.SaveAsync();
-                    _logger.LogInformation("Deleted {Count} messages for user {UserId} before user deletion.", messagesToDelete.Count, userId);
-                }
-
-                // Delete friend entries where user is sender or receiver
-                var friendsToDelete = await _friendReadRepository
-                    .GetAll(tracking: true)
-                    .Where(f => f.SenderId == userId || f.ReceiverId == userId)
-                    .ToListAsync(cancellationToken);
-
-                if (friendsToDelete.Any())
-                {
-                    foreach (var f in friendsToDelete)
-                    {
-                        _friendWriteRepository.Remove(f);
-                    }
-
-                    await _friendWriteRepository.SaveAsync();
-                    _logger.LogInformation("Deleted {Count} friend entries for user {UserId} before user deletion.", friendsToDelete.Count, userId);
-                }
-
-                // 2) Now delete the user via UserManager
-                var deleteResult = await _userManager.DeleteAsync(user);
-
-                if (!deleteResult.Succeeded)
-                {
-                    var errs = new List<string>();
-                    foreach (var e in deleteResult.Errors)
-                        errs.Add(e.Description);
-
-                    _logger.LogWarning("Kullanıcı silme başarısız: {UserId} - {Errors}", request.UserId, string.Join(", ", errs));
-                    return new DeleteUserCommandResponse { IsSuccess = false, Message = "Kullanıcı silinemedi.", Errors = errs };
-                }
-
-                _logger.LogInformation("Kullanıcı silindi: {UserId}", request.UserId);
-                return new DeleteUserCommandResponse { IsSuccess = true, Message = "Hesabınız başarıyla silindi." };
+                    { "UserId", new[] { "Kullanıcı ID boş olamaz." } }
+                });
             }
-            catch (Exception ex)
+
+            var callerId = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? _httpContextAccessor?.HttpContext?.User?.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(callerId))
             {
-                _logger.LogError(ex, "Kullanıcı silinirken hata: {UserId}", request?.UserId);
-                return new DeleteUserCommandResponse
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatası oluştu.",
-                    Errors = new List<string> { ex.Message }
-                };
+                throw new UnauthorizedException("Yetkilendirme bilgisi bulunamadı.");
             }
+
+            if (!string.Equals(callerId, request.UserId, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Yetkisiz silme girişimi. CallerId: {CallerId}, TargetUserId: {TargetId}", callerId, request.UserId);
+                throw new BusinessException("UNAUTHORIZED_ACTION", "Bu işlemi gerçekleştirme yetkiniz yok. Sadece kendi hesabınızı silebilirsiniz.");
+            }
+
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+            {
+                throw new NotFoundException($"Kullanıcı bulunamadı (ID: {request.UserId})");
+            }
+
+            var userId = user.Id;
+
+            var messagesToDelete = await _messageReadRepository
+                .GetAll(tracking: true)
+                .Where(m => m.SenderId == userId || m.ReceiverId == userId)
+                .ToListAsync(cancellationToken);
+
+            if (messagesToDelete.Any())
+            {
+                _messageWriteRepository.RemoveRange(messagesToDelete); 
+                await _messageWriteRepository.SaveAsync();
+                _logger.LogInformation("{Count} mesaj silindi. User: {UserId}", messagesToDelete.Count, userId);
+            }
+
+            var friendsToDelete = await _friendReadRepository
+                .GetAll(tracking: true)
+                .Where(f => f.SenderId == userId || f.ReceiverId == userId)
+                .ToListAsync(cancellationToken);
+
+            if (friendsToDelete.Any())
+            {
+                _friendWriteRepository.RemoveRange(friendsToDelete);
+                await _friendWriteRepository.SaveAsync();
+                _logger.LogInformation("{Count} arkadaş kaydı silindi. User: {UserId}", friendsToDelete.Count, userId);
+            }
+
+            var deleteResult = await _userManager.DeleteAsync(user);
+
+            if (!deleteResult.Succeeded)
+            {
+                var errors = deleteResult.Errors.ToDictionary(e => e.Code, e => new[] { e.Description });
+                throw new ValidationException(errors);
+            }
+
+            await _signInManager.SignOutAsync();
+
+            _logger.LogInformation("Kullanıcı başarıyla silindi ve oturum kapatıldı: {UserId}", request.UserId);
+
+            return new DeleteUserCommandResponse
+            {
+                Message = "Hesabınız ve ilgili tüm veriler başarıyla silindi. Oturumunuz kapatıldı."
+            };
         }
     }
 }

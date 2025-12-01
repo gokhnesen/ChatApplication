@@ -16,14 +16,11 @@ namespace ChatApplicationAPI.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // --- 1. Temel Servisler ---
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
-            // Register IHttpContextAccessor so handlers can access caller claims
             builder.Services.AddHttpContextAccessor();
 
-            // Swagger Ayarları
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -40,16 +37,12 @@ namespace ChatApplicationAPI.API
             builder.Services.AddPersistenceServices(builder.Configuration);
             builder.Services.AddSignalR();
 
-            // --- 2. Identity Kurulumu ---
-            // Not: MapIdentityApi kullanıyorsan AddIdentityApiEndpoints doğru tercihtir.
             builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ChatAppDbContext>();
 
-            // --- 3. Authentication ve External Login Ayarları (KRİTİK KISIM) ---
             builder.Services.AddAuthentication(options =>
             {
-                // Google ve Identity'nin çakışmaması için varsayılan şemaları sabitliyoruz
                 options.DefaultScheme = IdentityConstants.ApplicationScheme;
                 options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
             })
@@ -57,12 +50,8 @@ namespace ChatApplicationAPI.API
                 {
                     options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
                     options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-
-                    // ✅ BU SATIR 500 HATASINI ÇÖZER:
-                    // Google'dan gelen geçici auth bilgisini Identity'nin External Cookie'sine yazar.
                     options.SignInScheme = IdentityConstants.ExternalScheme;
 
-                    // Hata ayıklama kontrolü
                     if (string.IsNullOrEmpty(options.ClientId) || string.IsNullOrEmpty(options.ClientSecret))
                     {
                         throw new Exception("Google ClientId veya ClientSecret appsettings.json içinde bulunamadı!");
@@ -101,11 +90,9 @@ namespace ChatApplicationAPI.API
 
             await AIFriendSeed.SeedAsync(app.Services);
 
-
-
             if (app.Environment.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage(); // ✅ Eklendi
+                app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
@@ -113,6 +100,8 @@ namespace ChatApplicationAPI.API
                 });
                 app.MapOpenApi();
             }
+
+            app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
             app.UseRouting();
 

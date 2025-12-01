@@ -21,215 +21,55 @@ namespace ChatApplicationAPI.API.Controllers
         [HttpPost("send-request")]
         public async Task<IActionResult> SendFriendRequest([FromBody] SendFriendRequestCommand command)
         {
-            try
-            {
-                if (command == null)
-                {
-                    return BadRequest(new SendFriendRequestResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Geçersiz istek.",
-                        Errors = new List<string> { "?stek bo?." }
-                    });
-                }
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new SendFriendRequestResponse
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
         [HttpPost("respond")]
         public async Task<IActionResult> RespondToFriendRequest([FromBody] RespondToFriendRequestCommand command)
         {
-            try
-            {
-                if (command == null)
-                {
-                    return BadRequest(new RespondToFriendRequestResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Geçersiz istek.",
-                        Errors = new List<string> { "?stek bo?." }
-                    });
-                }
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new RespondToFriendRequestResponse
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
         [HttpGet("my-friends")]
-        public async Task<IActionResult> GetMyFriends()
+        public async Task<IActionResult> GetMyFriends(string userId)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? giri?i yap?lmam??."
-                    });
-                }
-
-                var query = new GetFriendsQuery { UserId = userId };
-                var response = await Mediator.Send(query);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var query = new GetFriendsQuery { UserId = userId };
+            var response = await Mediator.Send(query);
+            return Ok(response);
         }
 
         [HttpGet("pending-requests")]
-        public async Task<IActionResult> GetPendingRequests()
+        public async Task<IActionResult> GetPendingRequests(string userId)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? giri?i yap?lmam??."
-                    });
-                }
-
-                var query = new GetPendingRequestsQuery { UserId = userId };
-                var response = await Mediator.Send(query);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var query = new GetPendingRequestsQuery { UserId = userId };
+            var response = await Mediator.Send(query);
+            return Ok(response);
         }
+
         [HttpDelete("remove/{friendId}")]
-        public async Task<IActionResult> RemoveFriend(string friendId)
+        public async Task<IActionResult> RemoveFriend([FromBody] RemoveFriendCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? giri?i yap?lmam??."
-                    });
-                }
 
-                var command = new RemoveFriendCommand
-                {
-                    UserId = userId,
-                    FriendId = friendId
-                };
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
         [HttpPost("block")]
         public async Task<IActionResult> BlockUser([FromBody] BlockFriendOrUserCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? giri?i yap?lmam??."
-                    });
-                }
 
-                command.BlockerId = userId;
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
         [HttpPost("unblock")]
         public async Task<IActionResult> UnblockUser([FromBody] UnBlockFriendOrUserCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? giri?i yap?lmam??."
-                    });
-                }
 
-                command.BlockerId = userId;
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
     }
 

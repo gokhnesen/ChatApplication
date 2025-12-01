@@ -1,22 +1,14 @@
 ﻿using ChatApplication.Application.Features.User.Commands.ChangePassword;
 using ChatApplication.Application.Features.User.Commands.DeleteUser;
+using ChatApplication.Application.Features.User.Commands.ExternalLogin;
 using ChatApplication.Application.Features.User.Commands.Register;
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace ChatApplicationAPI.API.Controllers
 {
@@ -46,39 +38,16 @@ namespace ChatApplicationAPI.API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterUserCommand command)
         {
             var response = await Mediator.Send(command);
-            return response.IsSuccess ? Ok(response) : BadRequest(response);
+            return Ok(response);
         }
 
         [HttpPut("update-profile")]
         [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullanıcı girişi yapılmamış."
-                    });
-                }
 
-                command.UserId = userId;
-
-                var response = await Mediator.Send(command);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatası oluştu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return Ok(response);
         }
 
         [HttpPost("upload-profile-photo")]
@@ -93,12 +62,10 @@ namespace ChatApplicationAPI.API.Controllers
                     return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
                 }
 
-
                 if (model.Photo == null || model.Photo.Length == 0)
                 {
                     return BadRequest(new { IsSuccess = false, Message = "Fotoğraf bulunamadı." });
                 }
-
 
                 var webRootPath = _environment.WebRootPath;
                 if (string.IsNullOrEmpty(webRootPath))
@@ -122,7 +89,6 @@ namespace ChatApplicationAPI.API.Controllers
                 }
 
                 var url = $"/uploads/profiles/{fileName}";
-
 
                 var user = await _userManager.FindByIdAsync(userId);
                 if (user == null)
@@ -182,41 +148,17 @@ namespace ChatApplicationAPI.API.Controllers
 
         [HttpGet("list")]
         [Authorize]
-        public async Task<IActionResult> GetUsers(
-            [FromQuery] string? searchTerm = null,
-            [FromQuery] string? excludeUserId = null,
-            [FromQuery] int? pageNumber = null,
-            [FromQuery] int? pageSize = null,
-            [FromQuery] bool? includeBlocked = null,
-            [FromQuery] bool onlyBlocked = false)
+        public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
         {
-            if (string.IsNullOrEmpty(excludeUserId) && User.Identity?.IsAuthenticated == true)
-            {
-                excludeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
-
-            var query = new GetUsersQuery
-            {
-                SearchTerm = searchTerm,
-                ExcludeUserId = excludeUserId,
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                IncludeBlocked = includeBlocked,
-                OnlyBlocked = onlyBlocked
-            };
-
             var response = await Mediator.Send(query);
             return Ok(new { IsSuccess = true, Data = response });
         }
-
-        // UserController.cs içerisine ekle
 
         [HttpGet("external-login")]
         [AllowAnonymous]
         public IActionResult ExternalLogin(string provider, string returnUrl = null)
         {
-            // 1. Kullanıcıyı Google veya Microsoft'a yönlendir
-            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "User", new { returnUrl });
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
             return Challenge(properties, provider);
         }
@@ -225,158 +167,31 @@ namespace ChatApplicationAPI.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
         {
-            returnUrl = returnUrl ?? "/"; // Frontend ana sayfası
-
-            // 2. Google'dan hata döndü mü?
-            if (remoteError != null)
+            var command = new ExternalLoginCommand
             {
-                return BadRequest(new { Message = $"Harici sağlayıcı hatası: {remoteError}" });
-            }
+                ReturnUrl = returnUrl,
+                RemoteError = remoteError
+            };
 
-            // 3. Google/Microsoft'tan gelen bilgileri al
-            var info = await _signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
-            {
-                return BadRequest(new { Message = "Harici giriş bilgisi yüklenemedi." });
-            }
+            var response = await Mediator.Send(command);
 
-            // 4. Kullanıcı daha önce bu Google hesabıyla giriş yapmış mı? (Login tablosunda var mı?)
-            var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: true, bypassTwoFactor: true);
-
-            if (signInResult.Succeeded)
-            {
-                // Zaten kayıtlı, cookie oluştu, yönlendir
-                return Redirect($"https://localhost:4200/login?externalAuth=true");
-            }
-
-            if (signInResult.IsLockedOut)
-            {
-                return BadRequest(new { Message = "Hesap kilitli." });
-            }
-
-            // 5. Kullanıcı yoksa, yeni hesap oluştur (Auto-Register)
-            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-            var name = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "User";
-            var surname = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "";
-
-            // Eğer email de yoksa (bazı providerlar vermeyebilir) hata dön
-            if (string.IsNullOrEmpty(email))
-            {
-                return BadRequest(new { Message = "Email bilgisi alınamadı." });
-            }
-
-            // 5.1. Bu email ile normal kayıt olmuş biri var mı?
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                // Kullanıcı tamamen yeni, oluşturalım
-                user = new ApplicationUser
-                {
-                    UserName = email, // Genelde email username olarak kullanılır
-                    Email = email,
-                    Name = name,
-                    LastName = surname,
-                    FriendCode = GenerateFriendCode(), // Senin zorunlu alanın
-                    // Use default profile image URL path; ensure file exists at:
-                    // C:\Users\gokha\source\repos\ChatApplication\ChatApplication\ChatApplicationAPI.API\wwwroot\uploads\profiles\default.jpg
-                    ProfilePhotoUrl = "/uploads/profiles/default.jpg",
-                    EmailConfirmed = true // Google'dan geldiyse onaylı sayabiliriz
-                };
-
-                var createResult = await _userManager.CreateAsync(user);
-                if (!createResult.Succeeded)
-                {
-                    return BadRequest(new { Message = "Kullanıcı oluşturulamadı", Errors = createResult.Errors });
-                }
-            }
-
-            // 5.2. Kullanıcı (yeni veya eski) ile Google hesabını eşleştir (AspNetUserLogins tablosuna yazar)
-            var addLoginResult = await _userManager.AddLoginAsync(user, info);
-            if (!addLoginResult.Succeeded)
-            {
-                return BadRequest(new { Message = "Google hesabı sisteme eklenemedi." });
-            }
-
-            // 6. Giriş yap (Cookie oluştur)
-            await _signInManager.SignInAsync(user, isPersistent: true);
-
-            // Frontend'e başarılı dönüş
-            return Redirect("https://localhost:4200/login?externalAuth=true");
+            return Redirect(response.RedirectUrl);
         }
-
-        // Helper method (Senin entity yapına göre)
-        private string GenerateFriendCode()
-        {
-            // Basit bir örnek, çakışma kontrolü yapman gerekebilir
-            return Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-        }
-
 
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new
-                    {
-                        IsSuccess = false,
-                        Message = "Kullanıcı girişi yapılmamış."
-                    });
-                }
-
-                command.UserId = userId;
-
-                var response = await Mediator.Send(command);
-                return response.IsSuccess ? Ok(response) : BadRequest(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatası oluştu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
+
         [HttpDelete("delete-account")]
         [Authorize]
         public async Task<IActionResult> DeleteAccount([FromBody] DeleteUserCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
-                }
-
-                command.UserId = userId;
-
-                var response = await Mediator.Send(command);
-                if (!response.IsSuccess)
-                {
-                    return BadRequest(response);
-                }
-
-                await _signInManager.SignOutAsync();
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    IsSuccess = false,
-                    Message = "Sunucu hatası oluştu.",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
+            var response = await Mediator.Send(command);
+            return Ok(response);
         }
     }
 }

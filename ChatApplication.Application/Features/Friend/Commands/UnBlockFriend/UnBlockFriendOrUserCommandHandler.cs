@@ -1,11 +1,14 @@
-﻿using ChatApplication.Application.Features.Friend.Commands.BlockFriend;
+﻿using ChatApplication.Application.Exceptions;
+using ChatApplication.Application.Features.Friend.Commands.BlockFriend;
 using ChatApplication.Application.Interfaces.Friend;
 using ChatApplication.Domain.Entities;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,71 +19,64 @@ namespace ChatApplication.Application.Features.Friend.Commands.UnBlockFriend
         private readonly IFriendReadRepository _friendReadRepository;
         private readonly IFriendWriteRepository _friendWriteRepository;
         private readonly ILogger<UnBlockFriendOrUserCommandHandler> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public UnBlockFriendOrUserCommandHandler(
             IFriendReadRepository friendReadRepository,
             IFriendWriteRepository friendWriteRepository,
-            ILogger<UnBlockFriendOrUserCommandHandler> logger)
+            ILogger<UnBlockFriendOrUserCommandHandler> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _friendReadRepository = friendReadRepository;
             _friendWriteRepository = friendWriteRepository;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<UnBlockFriendOrUserCommandResponse> Handle(UnBlockFriendOrUserCommand request, CancellationToken cancellationToken)
         {
-            try
+            var callerId = request.BlockerId;
+            if (string.IsNullOrWhiteSpace(callerId))
             {
-                _logger.LogInformation("Kullanıcı engel kaldırma işlemi: {BlockerId} -> {BlockedUserId}", request.BlockerId, request.BlockedUserId);
-
-                var friendship = await _friendReadRepository.GetFriendRequestAsync(request.BlockerId, request.BlockedUserId);
-
-                if (friendship == null)
-                {
-                    return new UnBlockFriendOrUserCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Engelleme kaydı bulunamadı."
-                    };
-                }
-
-                if (friendship.Status != FriendStatus.Engellendi)
-                {
-                    return new UnBlockFriendOrUserCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Kullanıcı engellenmemiş."
-                    };
-                }
-
-                if (friendship.SenderId != request.BlockerId)
-                {
-                    return new UnBlockFriendOrUserCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Bu engellemeyi kaldıramazsınız."
-                    };
-                }
-
-                _friendWriteRepository.Remove(friendship);
-                await _friendWriteRepository.SaveAsync();
-
-                return new UnBlockFriendOrUserCommandResponse
-                {
-                    IsSuccess = true,
-                    Message = "Engel başarıyla kaldırıldı."
-                };
+                callerId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             }
-            catch (Exception ex)
+
+            if (string.IsNullOrWhiteSpace(callerId))
             {
-                _logger.LogError(ex, "Engel kaldırılırken hata oluştu");
-                return new UnBlockFriendOrUserCommandResponse
-                {
-                    IsSuccess = false,
-                    Message = "İşlem sırasında bir hata oluştu.",
-                    Errors = new List<string> { ex.Message }
-                };
+                _logger.LogWarning("Unauthorized unblock attempt (no user id in context)");
+                throw new UnauthorizedException("Kullanıcı girişi bulunamadı.");
             }
+
+            _logger.LogInformation("Kullanıcı engel kaldırma işlemi: {BlockerId} -> {BlockedUserId}", callerId, request.BlockedUserId);
+
+            var friendship = await _friendReadRepository.GetFriendRequestAsync(callerId, request.BlockedUserId);
+
+            if (friendship == null)
+            {
+                _logger.LogWarning("Engelleme kaydı bulunamadı: {BlockerId} -> {BlockedUserId}", callerId, request.BlockedUserId);
+                throw new NotFoundException("Block record", $"{callerId}-{request.BlockedUserId}");
+            }
+
+            if (friendship.Status != FriendStatus.Engellendi)
+            {
+                _logger.LogWarning("Kullanıcı engellenmemiş: {FriendshipId}", friendship.Id);
+                throw new BusinessException("NOT_BLOCKED", "Kullanıcı engellenmemiş.", "Kullanıcı engellenmemiş.");
+            }
+
+            if (friendship.SenderId != callerId)
+            {
+                _logger.LogWarning("Yetkisiz engel kaldırma denemesi: {CallerId} for {FriendshipId}", callerId, friendship.Id);
+                throw new UnauthorizedException("Bu engellemeyi kaldıramazsınız.");
+            }
+
+            _friendWriteRepository.Remove(friendship);
+            await _friendWriteRepository.SaveAsync();
+
+            return new UnBlockFriendOrUserCommandResponse
+            {
+                IsSuccess = true,
+                Message = "Engel başarıyla kaldırıldı."
+            };
         }
     }
 }

@@ -49,6 +49,11 @@ namespace ChatApplication.Persistence.Repositories
 
             return Remove(model);
         }
+        public bool RemoveRange(List<T> models)
+        {
+            Table.RemoveRange(models);
+            return true;
+        }
 
         public async Task<bool> UpdateAsync(T model)
         {

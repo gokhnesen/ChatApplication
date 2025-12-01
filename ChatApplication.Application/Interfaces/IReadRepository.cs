@@ -11,6 +11,5 @@ namespace ChatApplication.Application.Interfaces
     {
         IQueryable<T> GetAll(bool tracking = true);
         Task<T> GetByIdAsync(Guid Id, bool tracking = true);
-        //Task<IReadOnlyList<T>> ListAsync();
     }
 }

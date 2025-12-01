@@ -12,6 +12,7 @@ namespace ChatApplication.Application.Interfaces
         Task<bool> AddRangeAsync(List<T> models);
         bool Remove(T model);
         Task<bool> RemoveAsync(string id);
+        bool RemoveRange(List<T> models);
 
         Task<bool> UpdateAsync(T model);
 
