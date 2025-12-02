@@ -12,6 +12,6 @@ namespace ChatApplication.Application.Interfaces.Message
         Task<List<Domain.Entities.Message>> GetMessagesAsync(string UserId1, string UserId2);
         Task<int> GetUnreadMessageCountAsync(string userId);
         Task<List<Domain.Entities.Message>> GetUnreadMessagesAsync(string userId);
-        Task<Domain.Entities.Message?> GetLatestMessageAsync(string userId1, string userId2); // Yeni metod
+        Task<Domain.Entities.Message?> GetLatestMessageAsync(string userId1, string userId2, CancellationToken cancellationToken); // Yeni metod
     }
 }

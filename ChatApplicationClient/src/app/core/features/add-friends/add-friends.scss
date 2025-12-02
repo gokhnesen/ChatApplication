@@ -2,25 +2,27 @@
   display: flex;
   flex: 1;
   height: 100%;
-  width: 500px;
+  width: 100%; 
   background: #111b21;
-  border-right: 1px solid #2a3942;
 }
 
 .add-friends-wrapper {
   display: flex;
   height: 100%;
+  width: 100%; 
   background: #111b21;
   overflow: hidden;
 }
 
 .add-friends-section {
-  width: 500px;
+  width: 500px; 
+  min-width: 350px; 
   background: #111b21;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #2a3942;
   overflow: hidden;
+  flex-shrink: 0; 
 }
 
 .search-header {
@@ -372,6 +374,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0; // Flexbox içinde içeriğin taşmasını önlemek için kritik
 }
 
 // Responsive

@@ -3,6 +3,8 @@ using ChatApplication.Application.Features.User.Commands.DeleteUser;
 using ChatApplication.Application.Features.User.Commands.ExternalLogin;
 using ChatApplication.Application.Features.User.Commands.Register;
 using ChatApplication.Application.Features.User.Commands.UpdateUserProfile;
+using ChatApplication.Application.Features.User.Commands.UploadPhoto;
+using ChatApplication.Application.Features.User.Queries.GetUserInfo;
 using ChatApplication.Application.Features.User.Queries.GetUsers;
 using ChatApplication.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -17,20 +19,12 @@ namespace ChatApplicationAPI.API.Controllers
     public class UserController : BaseController
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IWebHostEnvironment _environment;
-        private readonly UserManager<ApplicationUser> _userManager;
-
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
-        private const long MaxFileSize = 5 * 1024 * 1024;
 
         public UserController(
-            SignInManager<ApplicationUser> signInManager,
-            IWebHostEnvironment environment,
-            UserManager<ApplicationUser> userManager)
+            SignInManager<ApplicationUser> signInManager
+        )
         {
             _signInManager = signInManager;
-            _environment = environment;
-            _userManager = userManager;
         }
 
         [HttpPost("register")]
@@ -45,77 +39,16 @@ namespace ChatApplicationAPI.API.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileCommand command)
         {
-
             var response = await Mediator.Send(command);
             return Ok(response);
         }
 
         [HttpPost("upload-profile-photo")]
         [Authorize]
-        public async Task<IActionResult> UploadProfilePhoto([FromForm] ProfilePhotoUploadModelDto model)
+        public async Task<IActionResult> UploadProfilePhoto([FromForm] UploadProfilePhotoCommand command)
         {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new { IsSuccess = false, Message = "Kullanıcı girişi yapılmamış." });
-                }
-
-                if (model.Photo == null || model.Photo.Length == 0)
-                {
-                    return BadRequest(new { IsSuccess = false, Message = "Fotoğraf bulunamadı." });
-                }
-
-                var webRootPath = _environment.WebRootPath;
-                if (string.IsNullOrEmpty(webRootPath))
-                {
-                    webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
-                }
-
-                var uploadsFolder = Path.Combine(webRootPath, "uploads", "profiles");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                var extension = Path.GetExtension(model.Photo.FileName).ToLowerInvariant();
-                var fileName = $"{Guid.NewGuid()}{extension}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await model.Photo.CopyToAsync(fileStream);
-                }
-
-                var url = $"/uploads/profiles/{fileName}";
-
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
-                {
-                    return NotFound(new { IsSuccess = false, Message = "Kullanıcı veritabanında bulunamadı." });
-                }
-
-                user.ProfilePhotoUrl = url;
-
-                var updateResult = await _userManager.UpdateAsync(user);
-
-                if (!updateResult.Succeeded)
-                {
-                    return StatusCode(500, new { IsSuccess = false, Message = "Veritabanı güncelleme hatası.", Errors = updateResult.Errors });
-                }
-
-                return Ok(new
-                {
-                    IsSuccess = true,
-                    Message = "Fotoğraf başarıyla yüklendi.",
-                    ProfilePhotoUrl = url
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { IsSuccess = false, Message = "Fotoğraf yüklenirken bir hata oluştu.", Error = ex.Message });
-            }
+            var response = await Mediator.Send(command);
+            return response.IsSuccess ? Ok(response) : BadRequest(response);
         }
 
         [HttpGet("auth-status")]
@@ -126,24 +59,16 @@ namespace ChatApplicationAPI.API.Controllers
 
         [HttpGet("user-info")]
         [Authorize]
-        public async Task<ActionResult> GetUserInfo()
+        public async Task<ActionResult<GetUserInfoQueryResponse>> GetUserInfo()
         {
-            var user = await _signInManager.UserManager.GetUserAsync(User);
-            if (user == null)
+            var response = await Mediator.Send(new GetUserInfoQuery());
+
+            if (response == null)
             {
                 return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
             }
 
-            return Ok(new
-            {
-                user.Id,
-                user.Name,
-                user.UserName,
-                user.LastName,
-                user.Email,
-                user.ProfilePhotoUrl,
-                user.FriendCode
-            });
+            return Ok(response);
         }
 
         [HttpGet("list")]

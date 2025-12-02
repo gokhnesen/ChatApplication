@@ -14,7 +14,6 @@ namespace ChatApplicationAPI.API
             if (!fileParameters.Any())
                 return;
 
-            // Mevcut parametreleri temizle
             operation.Parameters?.Clear();
 
             operation.RequestBody = new OpenApiRequestBody

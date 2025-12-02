@@ -7,15 +7,15 @@ using System.Security.Claims;
 
 namespace ChatApplication.Application.Features.Friend.Queries.GetPendingRequests
 {
-    public class GetPendingRequestsHandler : IRequestHandler<GetPendingRequestsQuery, List<GetPendingRequestsResponse>>
+    public class GetPendingRequestsQueryHandler : IRequestHandler<GetPendingRequestsQuery, List<GetPendingRequestsResponse>>
     {
         private readonly IFriendReadRepository _friendReadRepository;
-        private readonly ILogger<GetPendingRequestsHandler> _logger;
+        private readonly ILogger<GetPendingRequestsQueryHandler> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public GetPendingRequestsHandler(
+        public GetPendingRequestsQueryHandler(
             IFriendReadRepository friendReadRepository,
-            ILogger<GetPendingRequestsHandler> logger,
+            ILogger<GetPendingRequestsQueryHandler> logger,
             IHttpContextAccessor httpContextAccessor)
         {
             _friendReadRepository = friendReadRepository;

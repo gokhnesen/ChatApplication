@@ -53,13 +53,14 @@ namespace ChatApplication.Persistence.Repositories.Message
     .ToListAsync();
         }
 
-        public async Task<Domain.Entities.Message?> GetLatestMessageAsync(string userId1, string userId2)
+
+        public Task<Domain.Entities.Message?> GetLatestMessageAsync(string userId1, string userId2, CancellationToken cancellationToken)
         {
-            return await Table
+            return Table
                 .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
                            (m.SenderId == userId2 && m.ReceiverId == userId1))
                 .OrderByDescending(m => m.SentAt)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

@@ -5,6 +5,7 @@ using ChatApplication.Application.Features.Friend.Commands.SendFriendRequest;
 using ChatApplication.Application.Features.Friend.Commands.UnBlockFriend;
 using ChatApplication.Application.Features.Friend.Queries.GetFriends;
 using ChatApplication.Application.Features.Friend.Queries.GetPendingRequests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -13,9 +14,10 @@ using System.Threading.Tasks;
 
 namespace ChatApplicationAPI.API.Controllers
 {
-    
+
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class FriendController : BaseController
     {
         [HttpPost("send-request")]
@@ -33,7 +35,7 @@ namespace ChatApplicationAPI.API.Controllers
         }
 
         [HttpGet("my-friends")]
-        public async Task<IActionResult> GetMyFriends(string userId)
+        public async Task<IActionResult> GetMyFriends([FromQuery] string? userId)
         {
             var query = new GetFriendsQuery { UserId = userId };
             var response = await Mediator.Send(query);
@@ -41,7 +43,7 @@ namespace ChatApplicationAPI.API.Controllers
         }
 
         [HttpGet("pending-requests")]
-        public async Task<IActionResult> GetPendingRequests(string userId)
+        public async Task<IActionResult> GetPendingRequests([FromQuery] string? userId)
         {
             var query = new GetPendingRequestsQuery { UserId = userId };
             var response = await Mediator.Send(query);

@@ -1,10 +1,13 @@
+﻿using ChatApplication.Application.Exceptions;
 using ChatApplication.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ValidationException = ChatApplication.Application.Exceptions.ValidationException;
 
 namespace ChatApplication.Application.Features.User.Commands.ChangePassword
 {
@@ -21,79 +24,51 @@ namespace ChatApplication.Application.Features.User.Commands.ChangePassword
 
         public async Task<ChangePasswordCommandResponse> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
         {
-            try
+            if (request == null)
             {
-                if (request == null)
-                {
-                    return new ChangePasswordCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Ge�ersiz istek."
-                    };
-                }
-
-                var user = await _userManager.FindByIdAsync(request.UserId);
-                if (user == null)
-                {
-                    return new ChangePasswordCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "Kullan?c? bulunamad?."
-                    };
-                }
-
-                var hasPassword = await _userManager.HasPasswordAsync(user);
-
-                IdentityResult result;
-                if (hasPassword)
-                {
-                    if (string.IsNullOrEmpty(request.CurrentPassword))
-                    {
-                        return new ChangePasswordCommandResponse
-                        {
-                            IsSuccess = false,
-                            Message = "Mevcut ?ifre gereklidir."
-                        };
-                    }
-
-                    result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-                }
-                else
-                {
-                    result = await _userManager.AddPasswordAsync(user, request.NewPassword);
-                }
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation("User ({UserId}) password changed successfully.", user.Id);
-                    return new ChangePasswordCommandResponse
-                    {
-                        IsSuccess = true,
-                        Message = "?ifre ba?ar?yla g�ncellendi."
-                    };
-                }
-                else
-                {
-                    var errors = result.Errors.Select(e => e.Description).ToList();
-                    _logger.LogWarning("Password change failed for user {UserId}: {Errors}", user.Id, string.Join(", ", errors));
-                    return new ChangePasswordCommandResponse
-                    {
-                        IsSuccess = false,
-                        Message = "?ifre g�ncellenemedi.",
-                        Errors = errors
-                    };
-                }
+                throw new ValidationException(nameof(request), "Geçersiz istek.");
             }
-            catch (System.Exception ex)
+
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
             {
-                _logger.LogError(ex, "Error changing password for user {UserId}", request?.UserId);
+                throw new NotFoundException(nameof(ApplicationUser), request.UserId);
+            }
+
+            var hasPassword = await _userManager.HasPasswordAsync(user);
+
+            IdentityResult result;
+            if (hasPassword)
+            {
+                if (string.IsNullOrEmpty(request.CurrentPassword))
+                {
+                    throw new ValidationException(nameof(request.CurrentPassword), "Mevcut şifre gereklidir.");
+                }
+
+                result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            }
+            else
+            {
+                result = await _userManager.AddPasswordAsync(user, request.NewPassword);
+            }
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("User ({UserId}) password changed successfully.", user.Id);
                 return new ChangePasswordCommandResponse
                 {
-                    IsSuccess = false,
-                    Message = "Sunucu hatas? olu?tu.",
-                    Errors = new System.Collections.Generic.List<string> { ex.Message }
+                    IsSuccess = true,
+                    Message = "Şifre başarıyla güncellendi."
                 };
             }
+
+            var errors = result.Errors.Select(e => e.Description).Where(d => !string.IsNullOrWhiteSpace(d)).ToList();
+            _logger.LogWarning("Password change failed for user {UserId}: {Errors}", user.Id, string.Join(", ", errors));
+
+            throw new BusinessException(
+                "PASSWORD_CHANGE_FAILED",
+                string.Join("; ", errors),
+                "Şifre güncellenemedi. Lütfen girdiğiniz bilgileri kontrol edin.");
         }
     }
 }
